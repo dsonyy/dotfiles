@@ -86,6 +86,11 @@ if ! snap list | grep spotify &> /dev/null; then
     snap install spotify
 fi
 
+step "slack"
+if ! snap list | grep slack &> /dev/null; then
+    sudo snap install slack
+fi
+
 step "claude desktop"
 if ! dpkg -l | grep -q claude-desktop &> /dev/null; then
     sudo curl -fsSLo /usr/share/keyrings/claude-desktop-archive-keyring.asc https://downloads.claude.ai/claude-desktop/key.asc
