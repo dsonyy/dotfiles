@@ -163,12 +163,13 @@ mkdir -p "$HOME/.codex"
 ln -sfnT "$DOTFILES/config/AGENTS.md" "$HOME/.codex/AGENTS.md"
 mkdir -p "$HOME/.agents"
 ln -sfnT "$DOTFILES/skills" "$HOME/.agents/skills"
+ln -sfnT "$DOTFILES/config/.codex/config.toml" "$HOME/.codex/config.toml"
 
 step "codex - plugins"
 codex plugin marketplace add "$DOTFILES/config"
-for p in "$DOTFILES"/config/plugins/*; do
+for p in "$DOTFILES"/config/plugins/*/.codex-plugin; do
     [ -d "$p" ] || continue
-    codex plugin add "$(basename "$p")@dsonyy"
+    codex plugin add "$(basename "$(dirname "$p")")@dsonyy"
 done
 
 
@@ -177,9 +178,17 @@ ln -sfnT "$DOTFILES/lessons" "$HOME/lessons"
 
 step "verify agent symlinks"
 broken=0
-for link in "$HOME/.claude/CLAUDE.md" "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.claude/settings.json" "$HOME/.codex/AGENTS.md" "$HOME/.agents/skills" "$HOME/lessons"; do
+for link in "$HOME/.claude/CLAUDE.md" "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.claude/settings.json" "$HOME/.codex/AGENTS.md" "$HOME/.codex/config.toml" "$HOME/.agents/skills" "$HOME/lessons"; do
     if [ ! -e "$link" ]; then
         printf '\033[31mBROKEN: %s -> %s\033[0m\n' "$link" "$(readlink "$link")"
+        broken=1
+    fi
+done
+for p in "$DOTFILES"/config/plugins/*/.codex-plugin; do
+    [ -d "$p" ] || continue
+    name=$(basename "$(dirname "$p")")
+    if ! codex plugin list 2>/dev/null | grep -q "$name@dsonyy *installed"; then
+        printf '\033[31mNOT INSTALLED: %s@dsonyy (codex)\033[0m\n' "$name"
         broken=1
     fi
 done
