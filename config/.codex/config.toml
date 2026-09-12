@@ -1,5 +1,8 @@
-model = "gpt-6-astra"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
 [projects."/home/dsonyy/repos"]
 trust_level = "trusted"
 
@@ -15,6 +18,9 @@ trust_level = "trusted"
 [projects."/home/dsonyy/brain"]
 trust_level = "trusted"
 
+[projects."/home/dsonyy/repos/vertical"]
+trust_level = "trusted"
+
 [marketplaces.dsonyy]
 source_type = "local"
 source = "/home/dsonyy/repos/dotfiles/config"
@@ -26,7 +32,7 @@ enabled = true
 url = "https://mcp.tactiq.io"
 
 [tui.model_availability_nux]
-gpt-6-astra = 2
+gpt-6-astra = 4
 
 [hooks.state]
 
