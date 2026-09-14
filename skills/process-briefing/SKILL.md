@@ -22,5 +22,6 @@ Format, in the note's language:
 - **Gaps**: what we do not know.
 - **Next steps**: a checkbox list, ending with a CTA.
 
-Save the brief as a new note next to the matter's existing notes. 
-Update any tracker it appears in (e.g. `JOBS.md`).
+By default, show the brief in the chat only. Do not create or edit any files.
+At the end, propose where to save it (a new note next to the matter's existing notes, plus any tracker it appears in, e.g. `JOBS.md`) and ask the user to confirm.
+Save and update the tracker only after the user confirms.
