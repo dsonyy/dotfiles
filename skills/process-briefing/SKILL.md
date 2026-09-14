@@ -10,7 +10,9 @@ Collect everything on the matter, then write the brief.
 Sources:
 - Gmail: all threads, including sent messages.
 - Google Calendar: past and upcoming events.
-- Notes and transcripts in `~/brain` by default. Search the working directory too.
+- Notes in `~/brain` by default. Search the working directory too.
+- Transcripts: always locate them as the `using-transcripts` skill describes.
+  To summarize a transcript, only when really needed, use the `summarizing-transcript` skill.
 - Web search, only for gaps such as who a person is.
 
 Format, in the note's language:
