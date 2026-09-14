@@ -7,13 +7,13 @@
 //      - $XDG_CONFIG_HOME/ponytail/config.json (any platform, if set)
 //      - ~/.config/ponytail/config.json (macOS / Linux fallback)
 //      - %APPDATA%\ponytail\config.json (Windows fallback)
-//   3. 'full'
+//   3. 'lite'
 
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const DEFAULT_MODE = 'full';
+const DEFAULT_MODE = 'lite';
 const VALID_MODES = ['off', 'lite', 'full', 'ultra', 'review'];
 const RUNTIME_MODES = ['off', 'lite', 'full', 'ultra'];
 
