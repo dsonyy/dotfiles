@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-limit=${1:-10}
+limit=${1:-5}
 [[ $limit =~ ^[1-9][0-9]*$ ]] || { echo "Usage: mirror.sh [conversation_count]" >&2; exit 1; }
 
 key_file=~/sessionKey
