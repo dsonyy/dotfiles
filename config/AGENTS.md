@@ -20,6 +20,12 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 - Widening scope past what was asked, or narrowing it because a part turned out to be hard.
 - Resolving a conflict between these instructions and any other source. Surface it, do not arbitrate.
 
+## Where things live
+
+- Global configuration (agent instructions, skills, tool settings, shell and editor config) lives in `~/repos/dotfiles` and is tracked there, symlinked into place.
+  Write it directly under `~` only when the tool cannot follow a symlink or the file is machine- or project-specific.
+- Projects without a code repository yet, and note-based or other non-code projects, go in their own directory under `~/brain/projects/`, unless the user says otherwise.
+
 ## Writing
 
 - Don't over-weight development cost in technical decisions. Do not underestimate AI coding speed nowadays.
