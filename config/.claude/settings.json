@@ -21,8 +21,7 @@
       "mcp__claude_ai_Atlassian__*",
       "mcp__claude_ai_Excalidraw__*",
       "mcp__microsoft-azure__*",
-      "mcp__elasticsearch__*",
-      "mcp__tactiq__*"
+      "mcp__elasticsearch__*"
     ],
     "deny": [],
     "ask": [],
@@ -44,8 +43,7 @@
     ]
   },
   "enabledPlugins": {
-    "ponytail@dsonyy": false,
-    "mcps@dsonyy": true
+    "ponytail@dsonyy": false
   },
   "extraKnownMarketplaces": {
     "dsonyy": {

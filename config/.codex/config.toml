@@ -28,9 +28,6 @@ source = "/home/dsonyy/repos/dotfiles/config"
 [plugins."ponytail@dsonyy"]
 enabled = true
 
-[mcp_servers.tactiq]
-url = "https://mcp.tactiq.io"
-
 [tui.model_availability_nux]
 gpt-6-astra = 4
 
