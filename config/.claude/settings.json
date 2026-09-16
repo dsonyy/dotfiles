@@ -42,10 +42,6 @@
       }
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "bash \"$HOME/repos/dotfiles/config/plugins/ponytail/hooks/ponytail-statusline.sh\""
-  },
   "enabledPlugins": {
     "ponytail@dsonyy": false,
     "mcps@dsonyy": true
