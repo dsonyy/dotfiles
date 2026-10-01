@@ -1,4 +1,4 @@
 worktrees
 *:Zone.Identifier
 .claude.json
-__pycache__/
+__pycache__/skills/synced/
