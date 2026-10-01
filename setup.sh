@@ -72,8 +72,9 @@ fi
 
 step "insync"
 if ! dpkg -l | grep -q "^ii  insync " &> /dev/null; then
-    curl -fsSL https://apt.insync.io/insynchq.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/insynchq.gpg > /dev/null
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/insynchq.gpg] https://apt.insync.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) non-free contrib" | sudo tee /etc/apt/sources.list.d/insync.list
+    curl -fsSL https://apt.insync.io/insynchq.gpg | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/insynchq.gpg > /dev/null
+    # must match the entry insync's postinst greps for, or it appends a conflicting duplicate
+    echo "deb [signed-by=/etc/apt/trusted.gpg.d/insynchq.gpg] http://apt.insync.io/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) non-free contrib" | sudo tee /etc/apt/sources.list.d/insync.list
     sudo apt update && sudo apt install -y insync
 fi
 
