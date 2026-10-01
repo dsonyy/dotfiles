@@ -59,6 +59,7 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 - Verification: Run tests, check build, suggest user verification. Ask: "Would a staff engineer approve this?"
 - Elegance: For non-trivial changes, pause and ask "is there a more elegant way?" Skip for simple fixes.
 - Autonomous bug fixing: When given a bug report, just fix it. Point at logs/errors, then resolve. Zero hand-holding.
+- Commits: Always use the `git-commiting` skill to create a commit.
 
 ## Lessons
 
