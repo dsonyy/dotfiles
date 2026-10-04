@@ -27,3 +27,6 @@ source = "/home/dsonyy/repos/dotfiles/config"
 
 [tui.model_availability_nux]
 gpt-6-astra = 4
+
+[plugins."mcps@dsonyy"]
+enabled = true

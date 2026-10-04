@@ -1,5 +1,12 @@
 {
   "name": "dsonyy",
   "interface": { "displayName": "dsonyy dotfiles" },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "mcps",
+      "source": { "source": "local", "path": "./plugins/mcps" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
 }
