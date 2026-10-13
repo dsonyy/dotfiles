@@ -39,3 +39,4 @@ agents
 
 - [Mount NTFS with ntfs-3g, not the ntfs3 kernel driver](records/mount-ntfs-with-ntfs-3g-not-the-ntfs3-kernel-driver.md) | linux, filesystem, debugging
 - [Surface conflicting instructions instead of arbitrating them](records/surface-conflicting-instructions-instead-of-arbitrating-them.md) | agents, git
+- [Check converted documents for markup artifacts before deleting sources](records/check-converted-documents-for-markup-artifacts-before-deleting-sources.md) | agents, testing, data-loss
