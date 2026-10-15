@@ -30,6 +30,16 @@
   "model": "opus",
   "enableAllProjectMcpServers": true,
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Contents of ~/lessons/index.md (open matching lessons before starting a task):'; cat $HOME/lessons/index.md"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",

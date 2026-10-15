@@ -1,5 +1,5 @@
 ---
-name: lessons-writing
+name: learn
 description: Write a lesson to ~/lessons after a hard-won fix, a long debug, a dead end, or a decision the user reversed several times. Use when asked to save, record or write down a lesson or learning.
 ---
 

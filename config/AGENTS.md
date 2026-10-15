@@ -60,4 +60,4 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 - Elegance: For non-trivial changes, pause and ask "is there a more elegant way?" Skip for simple fixes.
 - Autonomous bug fixing: When given a bug report, just fix it. Point at logs/errors, then resolve. Zero hand-holding.
 - Commits: Always use the `git-commiting` skill to create a commit.
-- Lessons: Use `lessons-searching` before non-trivial work and `lessons-writing` after a hard-won fix or a correction that generalizes beyond the current project.
+- Lessons: Before starting every new task, read `~/lessons/index.md` and open the lessons that match. Use `learn` after a hard-won fix or a correction that generalizes beyond the current project.
