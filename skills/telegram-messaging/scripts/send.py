@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import socket
 import sys
 import urllib.error
 import urllib.parse
@@ -9,6 +10,10 @@ from pathlib import Path
 
 ENV_FILE = Path.home() / "repos/dotfiles/.env"
 
+
+# IPv6 routes to Telegram intermittently blackhole on this network and urllib waits out the whole timeout
+_getaddrinfo = socket.getaddrinfo
+socket.getaddrinfo = lambda host, port, family=0, *args, **kwargs: _getaddrinfo(host, port, socket.AF_INET, *args, **kwargs)
 
 def load_env() -> None:
     for line in ENV_FILE.read_text().splitlines():
