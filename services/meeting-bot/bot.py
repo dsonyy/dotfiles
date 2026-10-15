@@ -4,6 +4,7 @@ import logging
 import os
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -19,7 +20,6 @@ CHAT_ID = int(os.environ["TELEGRAM_CHAT_ID"])
 API = f"https://api.telegram.org/bot{TOKEN}"
 MAX_BYTES = 20 * 1024 * 1024
 NOTES_DIR = Path.home() / "brain/projects/meetings"
-AUDIO_DIR = Path.home() / "data/projects/meetings"
 SESSIONS = Path.home() / ".cache/telegram-sessions"
 ACTIVE = SESSIONS / "active.json"
 FILES = SESSIONS / "files"
@@ -258,17 +258,17 @@ def transcribe(msg: dict, media: dict) -> None:
 def write_transcript(msg: dict, media: dict) -> None:
     recorded = datetime.fromtimestamp(msg["date"])
     name = f"{recorded:%Y-%m-%d-%H-%M-%S} Recording"
-    audio = AUDIO_DIR / f"{name}{Path(media.get('file_name') or 'voice.ogg').suffix}"
-    download(media["file_id"], audio)
-
-    model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
-    segments, info = model.transcribe(str(audio), vad_filter=True)
-    lines = [f"[{timestamp(s.start)}] {s.text.strip()}" for s in segments]
+    with tempfile.TemporaryDirectory() as tmp:
+        audio = Path(tmp) / f"audio{Path(media.get('file_name') or 'voice.ogg').suffix}"
+        download(media["file_id"], audio)
+        model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
+        segments, info = model.transcribe(str(audio), vad_filter=True)
+        lines = [f"[{timestamp(s.start)}] {s.text.strip()}" for s in segments]
 
     note = NOTES_DIR / f"{name}.md"
     note.write_text(
         f"---\ndate: {recorded:%Y-%m-%dT%H:%M}\nduration: {timestamp(info.duration)}\n"
-        f"language: {info.language}\naudio: {audio.name}\n---\n\n" + "\n".join(lines) + "\n"
+        f"language: {info.language}\n---\n\n" + "\n".join(lines) + "\n"
     )
     link = "https://obsid.net/?" + urllib.parse.urlencode({"vault": "brain", "file": f"projects/meetings/{name}"})
     reply(f"Done: {name}", markup=f'Done: <a href="{html.escape(link)}">{name}</a> ({timestamp(info.duration)})')
