@@ -11,7 +11,7 @@ Sources:
 - Google Calendar: events of the day, plus the first event of the next day.
 - Gmail: threads received and sent that day. Flag the ones waiting for my reply.
 - Todoist: tasks completed that day, tasks due that day, overdue tasks.
-- Notes: files in `~/brain` modified that day (`find -newermt`, skip `.obsidian`). Skim them for what they are about. Include the day's entries from the daily log: the newest month file in the newest year project, `~/brain/projects/<YYYY>/<YYYY-MM>.md` (for a past day, the file for that day's month).
+- Notes: files in `~/brain` modified that day (`find -newermt`, skip `.obsidian`). Skim them for what they are about. Include the day's entries from the daily log: `~/brain/projects/<YYYY>/<YYYY>.md`, under the `## YYYY-MM` section for that day.
 - Code: for each git repo in `~/repos` (including `~/repos/worktrees`), my commits that day on all branches, plus uncommitted changes if the day is today.
 - Agent sessions: Claude Code (`~/.claude/projects`) and Codex (`~/.codex/sessions`) sessions active that day. Read only the first user prompts to tell what each was about.
 
