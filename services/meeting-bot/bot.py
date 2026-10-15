@@ -194,7 +194,7 @@ def handle(msg: dict) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    api("setMyCommands", commands=json.dumps([{"command": "sessions", "description": "Pick an agent session"}]))
+    api("setMyCommands", commands=json.dumps([{"command": "sessions", "description": "Pick an agent session"}]), scope=json.dumps({"type": "all_private_chats"}))
     offset = 0
     while True:
         try:
