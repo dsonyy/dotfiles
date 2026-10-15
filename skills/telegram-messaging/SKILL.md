@@ -4,12 +4,12 @@ description: Send the user a short message on Telegram through their own bot. Us
 ---
 
 ```bash
-python3 scripts/send.py <<'EOF'
+python3 ~/.claude/skills/telegram-messaging/scripts/send.py <<'EOF'
 <message>
 EOF
 ```
 
-Prints `sent <id>`, or the Telegram error.
+Prints `sent <id>`, or the Telegram error. If the user replies to the message, the reply comes back as a new prompt in a fork of this session.
 
 ## Writing
 
