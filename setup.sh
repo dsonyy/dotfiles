@@ -139,6 +139,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 nvm install 24
 
+step "pi"
+npm install -g @earendil-works/pi-coding-agent
+
 
 ############## SETUP
 
@@ -185,6 +188,10 @@ for p in "$DOTFILES"/config/plugins/*/.codex-plugin; do
     codex plugin add "$(basename "$(dirname "$p")")@dsonyy"
 done
 
+step "pi - symlinks"
+mkdir -p "$HOME/.pi/agent"
+ln -sfnT "$DOTFILES/config/AGENTS.md" "$HOME/.pi/agent/AGENTS.md"
+ln -sfnT "$DOTFILES/config/.pi/mcp.json" "$HOME/.pi/agent/mcp.json"
 
 step "lessons - symlink"
 ln -sfnT "$HOME/brain/lessons" "$HOME/lessons"
