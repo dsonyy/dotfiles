@@ -22,6 +22,7 @@ NOTES_DIR = Path.home() / "brain/projects/meetings"
 AUDIO_DIR = Path.home() / "data/projects/meetings"
 SESSIONS = Path.home() / ".cache/telegram-sessions"
 ACTIVE = SESSIONS / "active.json"
+FILES = SESSIONS / "files"
 CLAUDE = Path.home() / ".local/bin/claude"
 CLAUDE_DIR = Path.home() / ".claude"
 
@@ -49,9 +50,22 @@ def api(method: str, **params) -> dict:
             time.sleep(2)
 
 
+def download(file_id: str, target: Path) -> None:
+    file_path = api("getFile", file_id=file_id)["file_path"]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TOKEN}/{file_path}", target)
+
+
 def reply(text: str, markup: str | None = None, **params) -> None:
     body = f"<i>{markup or html.escape(text)}</i>"
     log.info(f"reply sent: {api('sendMessage', chat_id=CHAT_ID, text=body, parse_mode='HTML', **params)['message_id']} {text}")
+
+
+def find_image(msg: dict) -> dict | None:
+    if "photo" in msg:
+        return msg["photo"][-1]
+    document = msg.get("document", {})
+    return document if document.get("mime_type", "").startswith("image/") else None
 
 
 def find_audio(msg: dict) -> dict | None:
@@ -214,6 +228,12 @@ def handle(msg: dict) -> None:
     if "text" in msg:
         forward(msg)
         return
+    image = find_image(msg)
+    if image:
+        path = FILES / f"{msg['message_id']}{Path(image.get('file_name') or 'photo.jpg').suffix}"
+        download(image["file_id"], path)
+        forward(msg | {"text": f"{msg.get('caption', '')} [image: {path}]".strip()})
+        return
     media = find_audio(msg)
     if not media:
         return
@@ -239,8 +259,7 @@ def write_transcript(msg: dict, media: dict) -> None:
     recorded = datetime.fromtimestamp(msg["date"])
     name = f"{recorded:%Y-%m-%d-%H-%M-%S} Recording"
     audio = AUDIO_DIR / f"{name}{Path(media.get('file_name') or 'voice.ogg').suffix}"
-    file_path = api("getFile", file_id=media["file_id"])["file_path"]
-    urllib.request.urlretrieve(f"https://api.telegram.org/file/bot{TOKEN}/{file_path}", audio)
+    download(media["file_id"], audio)
 
     model = WhisperModel("large-v3-turbo", device="cpu", compute_type="int8")
     segments, info = model.transcribe(str(audio), vad_filter=True)
