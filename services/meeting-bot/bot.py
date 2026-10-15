@@ -6,6 +6,7 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -35,8 +36,17 @@ socket.getaddrinfo = lambda host, port, family=0, *args, **kwargs: _getaddrinfo(
 
 def api(method: str, **params) -> dict:
     data = urllib.parse.urlencode(params).encode()
-    with urllib.request.urlopen(f"{API}/{method}", data, timeout=90) as resp:
-        return json.load(resp)["result"]
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(f"{API}/{method}", data, timeout=90) as resp:
+                return json.load(resp)["result"]
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, ConnectionError) as e:
+            if attempt == 2:
+                raise
+            log.info(f"{method} retried after {e}")
+            time.sleep(2)
 
 
 def reply(text: str, markup: str | None = None, **params) -> None:
