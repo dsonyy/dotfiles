@@ -25,6 +25,8 @@ CLAUDE = Path.home() / ".local/bin/claude"
 CLAUDE_DIR = Path.home() / ".claude"
 
 log = logging.getLogger("meetings")
+FORKS = threading.Lock()
+TRANSCRIPTIONS = threading.Lock()
 
 
 # IPv6 routes to Telegram intermittently blackhole on this network and urllib waits out the whole timeout
@@ -37,8 +39,9 @@ def api(method: str, **params) -> dict:
         return json.load(resp)["result"]
 
 
-def reply(text: str, **params) -> None:
-    log.info(f"reply sent: {api('sendMessage', chat_id=CHAT_ID, text=text, **params)['message_id']} {text}")
+def reply(text: str, markup: str | None = None, **params) -> None:
+    body = f"<i>{markup or html.escape(text)}</i>"
+    log.info(f"reply sent: {api('sendMessage', chat_id=CHAT_ID, text=body, parse_mode='HTML', **params)['message_id']} {text}")
 
 
 def find_audio(msg: dict) -> dict | None:
@@ -53,13 +56,24 @@ def timestamp(seconds: float) -> str:
     return f"{s // 3600:02}:{s % 3600 // 60:02}:{s % 60:02}"
 
 
-def run_agent(session: dict, text: str) -> None:
+def run_agent(session: dict, text: str, from_active: bool) -> None:
+    with FORKS:
+        if from_active:
+            session = json.loads(ACTIVE.read_text())
+        fork(session, text)
+
+
+def fork(session: dict, text: str) -> None:
     prompt = f"Message from the user on Telegram:\n\n{text}\n\nAnswer them on Telegram with the telegram-messaging skill."
-    result = subprocess.run(
-        [CLAUDE, "--resume", session["session_id"], "--fork-session", "--permission-mode", session["permission_mode"],
-         "--output-format", "json", "-p", prompt],
-        cwd=session["cwd"], capture_output=True, text=True,
-    )
+    mode = ["--permission-mode", session["permission_mode"]] if session.get("permission_mode") else []
+    try:
+        result = subprocess.run(
+            [CLAUDE, "--resume", session["session_id"], "--fork-session", *mode, "--output-format", "json", "-p", prompt],
+            cwd=session["cwd"], capture_output=True, text=True, timeout=3600,
+        )
+    except subprocess.TimeoutExpired:
+        reply("Agent timed out after 1 h.")
+        return
     if result.returncode:
         reply(f"Agent failed: {(result.stderr or result.stdout)[-500:]}")
         return
@@ -89,7 +103,7 @@ def live_sessions() -> dict:
 
 
 def transcript_info(path: Path) -> dict:
-    info = {"session_id": path.stem, "title": "", "permission_mode": "default", "cwd": None}
+    info = {"session_id": path.stem, "title": "", "permission_mode": None, "cwd": None}
     for line in path.open():
         if '"type":"custom-title"' in line:
             info["custom"] = json.loads(line)["customTitle"]
@@ -118,8 +132,30 @@ def label(session: dict) -> str:
 
 
 def show_sessions() -> None:
-    buttons = [[{"text": label(s), "callback_data": s["session_id"]}] for s in recent_sessions()]
+    buttons = [[{"text": "➕ New session", "callback_data": "new"}]]
+    buttons += [[{"text": label(s), "callback_data": s["session_id"]}] for s in recent_sessions()]
     reply("Pick a session. Plain messages go to it.", reply_markup=json.dumps({"inline_keyboard": buttons}))
+
+
+def new_session() -> None:
+    cwd = str(Path.home() / "brain")
+    window = subprocess.run(
+        ["tmux", "new-window", "-d", "-t", "main:", "-c", cwd, "-P", "-F", "#{pane_id}"], capture_output=True, text=True
+    )
+    if window.returncode:
+        reply(f"Could not open a tmux window: {window.stderr.strip()}")
+        return
+    pane = window.stdout.strip()
+    subprocess.run(["tmux", "send-keys", "-t", pane, "claude", "Enter"])
+    for _ in range(30):
+        time.sleep(1)
+        session = next((s for s in live_sessions().values() if s["tmux_pane"] == pane), None)
+        if session:
+            SESSIONS.mkdir(parents=True, exist_ok=True)
+            ACTIVE.write_text(json.dumps(session | {"cwd": cwd}))
+            reply(f"New session in tmux pane {pane}, in ~/brain. Plain messages go to it.")
+            return
+    reply(f"New session in tmux pane {pane} did not start.")
 
 
 def pick_session(query: dict) -> None:
@@ -127,6 +163,9 @@ def pick_session(query: dict) -> None:
         api("answerCallbackQuery", callback_query_id=query["id"])
     except urllib.error.HTTPError:
         log.info("callback query expired")
+    if query["data"] == "new":
+        new_session()
+        return
     session = next((s for s in recent_sessions() if s["session_id"] == query["data"]), None)
     if not session:
         reply("Session not found.")
@@ -136,14 +175,15 @@ def pick_session(query: dict) -> None:
     reply(f"Active: {label(session)}")
 
 
-def deliver(session: dict, text: str) -> None:
+def deliver(session: dict, text: str, from_active: bool = False) -> None:
     pane = live_pane(session)
     if pane:
-        subprocess.run(["tmux", "send-keys", "-t", pane, "-l", f"Telegram: {' '.join(text.split())}"])
+        typed = " ".join("".join(c for c in text if c.isprintable() or c.isspace()).split())
+        subprocess.run(["tmux", "send-keys", "-t", pane, "-l", f"Telegram (answer there with the telegram-messaging skill): {typed}"])
         subprocess.run(["tmux", "send-keys", "-t", pane, "Enter"])
         reply(f"Sent to the live session in tmux pane {pane}.")
         return
-    threading.Thread(target=run_agent, args=(session, text)).start()
+    threading.Thread(target=run_agent, args=(session, text, from_active)).start()
     reply("Session not live, forked it.")
 
 
@@ -155,7 +195,7 @@ def forward(msg: dict) -> None:
     if replied.exists():
         deliver(json.loads(replied.read_text()), msg["text"])
     elif ACTIVE.exists():
-        deliver(json.loads(ACTIVE.read_text()), msg["text"])
+        deliver(json.loads(ACTIVE.read_text()), msg["text"], from_active=True)
     else:
         reply("Pick a session with /sessions or reply to an agent's message.")
 
@@ -173,6 +213,19 @@ def handle(msg: dict) -> None:
         return
 
     reply("Transcribing...")
+    threading.Thread(target=transcribe, args=(msg, media)).start()
+
+
+def transcribe(msg: dict, media: dict) -> None:
+    with TRANSCRIPTIONS:
+        try:
+            write_transcript(msg, media)
+        except Exception as e:
+            log.exception("transcription failed")
+            reply(f"Transcription failed: {e}")
+
+
+def write_transcript(msg: dict, media: dict) -> None:
     recorded = datetime.fromtimestamp(msg["date"])
     name = f"{recorded:%Y-%m-%d-%H-%M-%S} Recording"
     audio = AUDIO_DIR / f"{name}{Path(media.get('file_name') or 'voice.ogg').suffix}"
@@ -189,7 +242,7 @@ def handle(msg: dict) -> None:
         f"language: {info.language}\naudio: {audio.name}\n---\n\n" + "\n".join(lines) + "\n"
     )
     link = "https://obsid.net/?" + urllib.parse.urlencode({"vault": "brain", "file": f"projects/meetings/{name}"})
-    reply(f'Done: <a href="{html.escape(link)}">{name}</a> ({timestamp(info.duration)})', parse_mode="HTML")
+    reply(f"Done: {name}", markup=f'Done: <a href="{html.escape(link)}">{name}</a> ({timestamp(info.duration)})')
 
 
 def main() -> None:
