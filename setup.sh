@@ -187,7 +187,7 @@ done
 
 
 step "lessons - symlink"
-ln -sfnT "$DOTFILES/lessons" "$HOME/lessons"
+ln -sfnT "$HOME/brain/lessons" "$HOME/lessons"
 
 step "verify agent symlinks"
 broken=0

@@ -60,11 +60,4 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 - Elegance: For non-trivial changes, pause and ask "is there a more elegant way?" Skip for simple fixes.
 - Autonomous bug fixing: When given a bug report, just fix it. Point at logs/errors, then resolve. Zero hand-holding.
 - Commits: Always use the `git-commiting` skill to create a commit.
-
-## Lessons
-
-`~/lessons/index.md` catalogs durable rules learned from past failures - global and OS-level, not project-scoped.
-
-- Before non-trivial work: scan the index rows for tags matching the task and open only those records. Never read `~/lessons/records/` wholesale.
-- After a correction that generalizes beyond the file it happened in: add one record plus its index row, or update an existing record, then run `python3 ~/lessons/check.py`.
-- Preferences and always-true rules belong in this file instead. If you cannot write a real Context incident, it is not a lesson.
+- Lessons: Use `lessons-searching` before non-trivial work and `lessons-writing` after a hard-won fix or a correction that generalizes beyond the current project.
