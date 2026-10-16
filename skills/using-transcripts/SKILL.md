@@ -6,7 +6,7 @@ description: Locate the transcript of a call, meeting, or recording whenever the
 Order of lookup for transcript request:
 
 1. Google Drive - Google Docs with the transcripts are stored in /projects/transcripts
-2. Brain - recordings sent to the Telegram meeting bot are transcribed to `~/brain/projects/meetings/YYYY-MM-DD-HH-MM-SS Recording.md`, named by recording time.
+2. Obsidian brain - `~/brain/projects/meetings`
 3. Local files - search in the current directory, ask user for hint if nothing found.
 
 When reading transcripts, most of the things are fine, but be aware that sometimes:
