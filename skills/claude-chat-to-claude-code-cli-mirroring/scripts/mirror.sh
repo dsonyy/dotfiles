@@ -4,13 +4,16 @@ set -euo pipefail
 limit=${1:-5}
 [[ $limit =~ ^[1-9][0-9]*$ ]] || { echo "Usage: mirror.sh [conversation_count]" >&2; exit 1; }
 
-key_file=~/sessionKey
 cwd=$HOME/brain
 project_dir=~/.claude/projects/$(sed 's#[/.]#-#g' <<<"$cwd")
-cookie_hint="Copy the sessionKey cookie value from claude.ai (F12 > Application > Cookies > https://claude.ai) into $key_file"
+cookie_hint="Log in at https://claude.ai in your browser and rerun."
 
-[[ -s $key_file ]] || { echo "Missing cookie. $cookie_hint" >&2; exit 1; }
-key=$(tr -d '[:space:]' <"$key_file")
+# rookie-cookies reports a harmless KWallet close failure on KDE after a successful read
+key=$(uv run -q --no-project --with rookie-cookies python -I -c '
+import rookie_cookies
+print(next((c["value"] for c in rookie_cookies.load(["claude.ai"]) if c["name"] == "sessionKey"), ""))
+' 2> >(grep -v 'KWallet handle' >&2))
+[[ -n $key ]] || { echo "No claude.ai session in any browser. $cookie_hint" >&2; exit 1; }
 
 api() {
   local out code body
@@ -25,7 +28,7 @@ api() {
   if [[ $code == 200 ]]; then
     printf '%s' "$body"
   elif [[ $code =~ ^40[13]$ && $body == \{* ]]; then
-    echo "Cookie invalid or expired. $cookie_hint" >&2
+    echo "claude.ai session expired. $cookie_hint" >&2
     return 1
   else
     echo "HTTP $code error for /api/$1: ${body:0:200}" >&2
