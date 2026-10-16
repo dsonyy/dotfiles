@@ -20,8 +20,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 HERE = Path(__file__).parent
-CLIENT_FILE = HERE / "secrets/client_secret.json"
-TOKEN_FILE = HERE / "secrets/gmail_token.json"
+CLIENT_FILE = HERE.parents[1] / "secrets/google_client_secret.json"
+TOKEN_FILE = HERE.parents[1] / "secrets/gmail_token.json"
 SPLIT_PROMPT = HERE / "split.md"
 GROUP_PROMPT = HERE / "group.md"
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
