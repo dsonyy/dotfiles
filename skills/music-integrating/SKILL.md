@@ -3,7 +3,7 @@ name: music-integrating
 description: Use this skill every time you do anything with music, the music library, playlists or Navidrome.
 ---
 
-Library is `~/data/music`, served by Navidrome. Config in `~/repos/dotfiles/services/navidrome/`. Navidrome picks up file changes on its own.
+Library is `~/data/music`, served by Navidrome. Config in `~/repos/dotfiles/services/navidrome/`.
 
 - Layout: `<Album Artist> - <Album>/NN - <Title>.<ext>`
 - Tracks without an album: `<Album Artist> - Singles/`, album `Singles`
