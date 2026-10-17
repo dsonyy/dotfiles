@@ -145,6 +145,13 @@ nvm install 24
 step "pi"
 npm install -g @earendil-works/pi-coding-agent
 
+step "wispr flow"
+sudo apt install -y python3-dbus python3-gi unzip wl-clipboard
+if [ ! -d "$HOME/repos/wispr-flow-linux" ]; then
+    git clone git@github.com:dsonyy/wispr-flow-linux.git "$HOME/repos/wispr-flow-linux"
+fi
+(cd "$HOME/repos/wispr-flow-linux" && npm install && node build.mjs && dist/wispr-flow/setup-permissions.sh)
+
 
 ############## SETUP
 
