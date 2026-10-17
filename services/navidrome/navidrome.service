@@ -4,7 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=%h/.local/bin/navidrome --configfile %h/repos/dotfiles/services/navidrome/navidrome.toml
+EnvironmentFile=%h/repos/dotfiles/.env
+ExecStart=/bin/sh -c 'ND_LASTFM_APIKEY="$$NAVIDROME_LASTFM_API_KEY" ND_LASTFM_SECRET="$$NAVIDROME_LASTFM_SECRET" exec %h/.local/bin/navidrome --configfile %h/repos/dotfiles/services/navidrome/navidrome.toml'
 Restart=always
 RestartSec=10
 
