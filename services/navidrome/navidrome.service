@@ -1,0 +1,12 @@
+[Unit]
+Description=Navidrome music server for ~/data/music
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=%h/.local/bin/navidrome --configfile %h/repos/dotfiles/services/navidrome/navidrome.toml
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

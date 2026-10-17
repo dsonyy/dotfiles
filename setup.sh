@@ -214,4 +214,14 @@ for p in "$DOTFILES"/config/plugins/*/.codex-plugin; do
 done
 [ "$broken" -eq 0 ] && echo "all agent symlinks resolve"
 
+step "navidrome"
+if [ ! -x "$HOME/.local/bin/navidrome" ]; then
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL https://github.com/navidrome/navidrome/releases/download/v0.64.2/navidrome_0.64.2_linux_amd64.tar.gz | tar xz -C "$HOME/.local/bin" navidrome
+fi
+mkdir -p "$HOME/.config/systemd/user" "$HOME/.local/share/navidrome" "$HOME/data/software/navidrome"
+ln -sfnT "$DOTFILES/services/navidrome/navidrome.service" "$HOME/.config/systemd/user/navidrome.service"
+systemctl --user daemon-reload
+systemctl --user enable --now navidrome
+
 step "DONE"
