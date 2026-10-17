@@ -65,6 +65,9 @@ if ! dpkg -l | grep keepassxc &> /dev/null; then
     sudo apt -y install keepassxc
 fi
 
+step "gimp"
+sudo apt install -y gimp
+
 step "obsidian"
 if ! snap list | grep obsidian &> /dev/null; then
     snap install obsidian --classic
