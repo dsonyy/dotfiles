@@ -22,9 +22,9 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 
 ## Filesystem
 
-- Global configuration (e.g. agent instructions, skills, tool settings, shell, editor config) lives in `~/repos/dotfiles` and is tracked there, symlinked into place.
+- Global configuration (e.g. agent instructions, skills, tool settings, shell, editor config) lives in `~/repos/dotfiles` (`X:\repos\dotfiles` on Windows) and is tracked there, symlinked into place.
   Write it directly under `~` only when the tool cannot follow a symlink or the file is machine- or project-specific.
-- Projects without a code repository yet, and note-based or other non-code projects, go in their own directory under `~/brain/projects/`, unless the user says otherwise.
+- Projects without a code repository yet, and note-based or other non-code projects, go in their own directory under `~/brain/projects/` (`C:\Users\<user>\brain\projects\` on Windows), unless the user says otherwise.
 - Everything else, especially heavier files that are neither repositories nor notes, goes on Google Drive. It is synced 1:1 to `~/data` (`X:\` on Windows), and its `projects/` and `archive/` mirror the ones in `~/brain`.
 
 ## Writing
