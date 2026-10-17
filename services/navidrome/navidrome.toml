@@ -1,11 +1,7 @@
 MusicFolder = "/home/dsonyy/data/music"
-DataFolder = "/home/dsonyy/.local/share/navidrome"
+DataFolder = "/home/dsonyy/data/software/navidrome"
+CacheFolder = "/home/dsonyy/.cache/navidrome"
 Address = "127.0.0.1"
 Port = 4533
 PlaylistsPath = "playlists"
 EnableInsightsCollector = false
-
-[Backup]
-Path = "/home/dsonyy/data/software/navidrome"
-Count = 7
-Schedule = "0 12 * * *"
