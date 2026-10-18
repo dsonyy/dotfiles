@@ -29,7 +29,7 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 
 ## Writing
 
-- Don't over-weight development cost in technical decisions. Do not underestimate AI coding speed nowadays.
+- Before writing prose for people (notes, reports, docs, READMEs, PR descriptions, emails), load the `writing` skill.
 - Prefer using "Sentence case text" over "Upper Case Text" in documents, UI elements unless otherwise noted.
 - Avoid fillers, hedging, no "it's worth noting that"
 - When asked for explanation, do not translate code to English line by line.
@@ -38,6 +38,7 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 
 ## Coding philosophy
 
+- Don't over-weight development cost in technical decisions. Do not underestimate AI coding speed nowadays.
 - When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible.
   This makes sure you find the real problem so your fix will actually solve it.
 - When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection.
