@@ -6,6 +6,8 @@ import re
 import socket
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -209,7 +211,16 @@ def save(day: str, text: str) -> Path:
 def telegram(text: str) -> None:
     params = {"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": text, "parse_mode": "HTML"}
     url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
-    urllib.request.urlopen(url, urllib.parse.urlencode(params).encode(), timeout=30)
+    for attempt in range(3):
+        try:
+            urllib.request.urlopen(url, urllib.parse.urlencode(params).encode(), timeout=30)
+            return
+        except urllib.error.HTTPError:
+            raise
+        except (urllib.error.URLError, ConnectionError):
+            if attempt == 2:
+                raise
+            time.sleep(5)
 
 
 def run() -> None:
