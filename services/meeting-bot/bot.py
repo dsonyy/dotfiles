@@ -2,6 +2,7 @@ import html
 import json
 import logging
 import os
+import shlex
 import socket
 import subprocess
 import tempfile
@@ -23,11 +24,12 @@ NOTES_DIR = Path.home() / "brain/projects/meetings"
 SESSIONS = Path.home() / ".cache/telegram-sessions"
 ACTIVE = SESSIONS / "active.json"
 FILES = SESSIONS / "files"
-CLAUDE = Path.home() / ".local/bin/claude"
 CLAUDE_DIR = Path.home() / ".claude"
 
 log = logging.getLogger("meetings")
-FORKS = threading.Lock()
+RESUMES = threading.Lock()
+DIRS = {"Home": "~", "Brain": "~/brain", "Repos": "~/repos", "Data": "~/data"}
+awaiting_path = False
 TRANSCRIPTIONS = threading.Lock()
 
 
@@ -78,32 +80,6 @@ def find_audio(msg: dict) -> dict | None:
 def timestamp(seconds: float) -> str:
     s = int(seconds)
     return f"{s // 3600:02}:{s % 3600 // 60:02}:{s % 60:02}"
-
-
-def run_agent(session: dict, text: str, from_active: bool) -> None:
-    with FORKS:
-        if from_active:
-            session = json.loads(ACTIVE.read_text())
-        fork(session, text)
-
-
-def fork(session: dict, text: str) -> None:
-    prompt = f"Message from the user on Telegram:\n\n{text}\n\nAnswer them on Telegram with the telegram-messaging skill."
-    mode = ["--permission-mode", session["permission_mode"]] if session.get("permission_mode") else []
-    try:
-        result = subprocess.run(
-            [CLAUDE, "--resume", session["session_id"], "--fork-session", *mode, "--output-format", "json", "-p", prompt],
-            cwd=session["cwd"], capture_output=True, text=True, timeout=3600,
-        )
-    except subprocess.TimeoutExpired:
-        reply("Agent timed out after 1 h.")
-        return
-    if result.returncode:
-        reply(f"Agent failed: {(result.stderr or result.stdout)[-500:]}")
-        return
-    if ACTIVE.exists() and json.loads(ACTIVE.read_text())["session_id"] == session["session_id"]:
-        fork = {k: v for k, v in session.items() if k not in ("tmux_pane", "claude_pid")}
-        ACTIVE.write_text(json.dumps(fork | {"session_id": json.loads(result.stdout)["session_id"]}))
 
 
 def live_pane(session: dict) -> str | None:
@@ -161,25 +137,57 @@ def show_sessions() -> None:
     reply("Pick a session. Plain messages go to it.", reply_markup=json.dumps({"inline_keyboard": buttons}))
 
 
-def new_session() -> None:
-    cwd = str(Path.home() / "brain")
+def show_dirs() -> None:
+    buttons = [[{"text": name, "callback_data": f"new:{path}"}] for name, path in DIRS.items()]
+    buttons += [[{"text": "Specify", "callback_data": "new:?"}]]
+    reply("Where should the new session start?", reply_markup=json.dumps({"inline_keyboard": buttons}))
+
+
+def start_claude(cwd: str, args: list[str]) -> dict | None:
     window = subprocess.run(
         ["tmux", "new-window", "-d", "-t", "main:", "-c", cwd, "-P", "-F", "#{pane_id}"], capture_output=True, text=True
     )
     if window.returncode:
         reply(f"Could not open a tmux window: {window.stderr.strip()}")
-        return
+        return None
     pane = window.stdout.strip()
-    subprocess.run(["tmux", "send-keys", "-t", pane, "claude", "Enter"])
+    subprocess.run(["tmux", "send-keys", "-t", pane, shlex.join(["claude", *args]), "Enter"])
     for _ in range(30):
         time.sleep(1)
         session = next((s for s in live_sessions().values() if s["tmux_pane"] == pane), None)
         if session:
-            SESSIONS.mkdir(parents=True, exist_ok=True)
-            ACTIVE.write_text(json.dumps(session | {"cwd": cwd}))
-            reply(f"New session in tmux pane {pane}, in ~/brain. Plain messages go to it.")
-            return
-    reply(f"New session in tmux pane {pane} did not start.")
+            return session
+    reply(f"Claude in tmux pane {pane} did not start.")
+    return None
+
+
+def activate(session: dict) -> dict:
+    SESSIONS.mkdir(parents=True, exist_ok=True)
+    ACTIVE.write_text(json.dumps(session))
+    return session
+
+
+def new_session(path: str) -> None:
+    cwd = Path(path).expanduser()
+    if not cwd.is_dir():
+        reply(f"No such directory: {path}. Send another path or /sessions.")
+        return
+    global awaiting_path
+    awaiting_path = False
+    session = start_claude(str(cwd), [])
+    if session:
+        activate(session | {"cwd": str(cwd)})
+        reply(f"New session in tmux pane {session['tmux_pane']}, in {path}. Plain messages go to it.")
+
+
+def resume(session: dict) -> dict | None:
+    live = live_sessions().get(session["session_id"])
+    if live:
+        return activate(session | live)
+    mode = ["--permission-mode", session["permission_mode"]] if session.get("permission_mode") else []
+    reply("Session not live, resuming it.")
+    started = start_claude(session["cwd"], ["--resume", session["session_id"], *mode])
+    return started and activate(session | started)
 
 
 def pick_session(query: dict) -> None:
@@ -187,39 +195,51 @@ def pick_session(query: dict) -> None:
         api("answerCallbackQuery", callback_query_id=query["id"])
     except urllib.error.HTTPError:
         log.info("callback query expired")
+    global awaiting_path
     if query["data"] == "new":
-        new_session()
+        show_dirs()
+        return
+    if query["data"] == "new:?":
+        awaiting_path = True
+        reply("Send the directory path.")
+        return
+    if query["data"].startswith("new:"):
+        new_session(query["data"][4:])
         return
     session = next((s for s in recent_sessions() if s["session_id"] == query["data"]), None)
     if not session:
         reply("Session not found.")
         return
-    SESSIONS.mkdir(parents=True, exist_ok=True)
-    ACTIVE.write_text(json.dumps(session))
+    activate(session)
     reply(f"Active: {label(session)}")
 
 
-def deliver(session: dict, text: str, from_active: bool = False) -> None:
-    pane = live_pane(session)
-    if pane:
+def deliver(session: dict, text: str) -> None:
+    with RESUMES:
+        session = session if live_pane(session) else resume(session)
+        if not session:
+            return
+        pane = session["tmux_pane"]
         typed = " ".join("".join(c for c in text if c.isprintable() or c.isspace()).split())
         subprocess.run(["tmux", "send-keys", "-t", pane, "-l", f"Telegram (answer there with the telegram-messaging skill): {typed}"])
         subprocess.run(["tmux", "send-keys", "-t", pane, "Enter"])
-        reply(f"Sent to the live session in tmux pane {pane}.")
-        return
-    threading.Thread(target=run_agent, args=(session, text, from_active)).start()
-    reply("Session not live, forked it.")
+    reply(f"Sent to the live session in tmux pane {pane}.")
 
 
 def forward(msg: dict) -> None:
+    global awaiting_path
     if msg["text"].startswith("/sessions"):
+        awaiting_path = False
         show_sessions()
+        return
+    if awaiting_path:
+        threading.Thread(target=new_session, args=(msg["text"].strip(),)).start()
         return
     replied = SESSIONS / f"{msg.get('reply_to_message', {}).get('message_id')}.json"
     if replied.exists():
-        deliver(json.loads(replied.read_text()), msg["text"])
+        threading.Thread(target=deliver, args=(json.loads(replied.read_text()), msg["text"])).start()
     elif ACTIVE.exists():
-        deliver(json.loads(ACTIVE.read_text()), msg["text"], from_active=True)
+        threading.Thread(target=deliver, args=(json.loads(ACTIVE.read_text()), msg["text"])).start()
     else:
         reply("Pick a session with /sessions or reply to an agent's message.")
 
