@@ -2,10 +2,14 @@
 Description=Daily digest of unread Gmail newsletters into brain/projects/newsletters
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=1h
+StartLimitBurst=4
 
 [Service]
 Type=oneshot
 WorkingDirectory=%h/repos/dotfiles/services/newsletter-digest
 EnvironmentFile=%h/repos/dotfiles/.env
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Restart=on-failure
+RestartSec=5min
 ExecStart=%h/repos/dotfiles/services/newsletter-digest/.venv/bin/python digest.py
