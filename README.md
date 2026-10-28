@@ -7,6 +7,7 @@
 - Public, but secret stuff gitignored.
 
 - `setup.sh` installs everything on a fresh Ubuntu and symlinks this repo into place.
+- `setup-mac.sh` does the same on macOS (homebrew, no services).
 - `dot/` - dot configs symlinked into home dir
 - `config/` - configs for ai agents and other tools
 - `skills/` - agents' skills
