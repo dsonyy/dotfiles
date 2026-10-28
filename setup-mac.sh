@@ -23,7 +23,7 @@ brew install git gh micro tmux
 brew install --cask font-meslo-lg-nerd-font
 
 step "apps"
-brew install --cask visual-studio-code
+brew install --cask wispr-flow visual-studio-code
 
 step "oh-my-zsh"
 if ! [ -d "$HOME/.oh-my-zsh" ]; then
