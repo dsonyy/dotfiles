@@ -19,7 +19,7 @@ fi
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 step "core"
-brew install git micro tmux
+brew install git gh micro tmux
 brew install --cask font-meslo-lg-nerd-font
 
 step "oh-my-zsh"
