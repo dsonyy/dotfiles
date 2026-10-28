@@ -22,6 +22,9 @@ step "core"
 brew install git gh micro tmux
 brew install --cask font-meslo-lg-nerd-font
 
+step "apps"
+brew install --cask visual-studio-code
+
 step "oh-my-zsh"
 if ! [ -d "$HOME/.oh-my-zsh" ]; then
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
