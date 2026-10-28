@@ -112,7 +112,7 @@ if [[ -o interactive ]] && [[ -z "$TMUX" ]] && command -v tmux >/dev/null 2>&1; 
 fi
 
 # opencode
-export PATH=/home/dsonyy/.opencode/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
