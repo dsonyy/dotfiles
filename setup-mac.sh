@@ -96,12 +96,26 @@ for p in "$DOTFILES"/config/plugins/*; do
     claude plugin install "$(basename "$p")@dsonyy"
 done
 
+# config.toml stays local: the ChatGPT app writes machine paths into it.
+step "codex"
+CODEX=/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex
+mkdir -p "$HOME/.codex" "$HOME/.agents"
+link "$DOTFILES/config/AGENTS.md" "$HOME/.codex/AGENTS.md"
+link "$DOTFILES/skills" "$HOME/.agents/skills"
+if [ -x "$CODEX" ]; then
+    "$CODEX" plugin marketplace add "$DOTFILES/config"
+    for p in "$DOTFILES"/config/plugins/*/.codex-plugin; do
+        [ -d "$p" ] || continue
+        "$CODEX" plugin add "$(basename "$(dirname "$p")")@dsonyy"
+    done
+fi
+
 step "lessons - symlink"
 link "$HOME/brain/lessons" "$HOME/lessons"
 
 step "verify claude setup"
 broken=0
-for link in "$HOME/.claude/CLAUDE.md" "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.claude/settings.json" "$HOME/lessons"; do
+for link in "$HOME/.claude/CLAUDE.md" "$HOME/.claude/skills" "$HOME/.claude/agents" "$HOME/.claude/settings.json" "$HOME/.codex/AGENTS.md" "$HOME/.agents/skills" "$HOME/lessons"; do
     if [ ! -e "$link" ]; then
         printf '\033[31mBROKEN: %s -> %s\033[0m\n' "$link" "$(readlink "$link")"
         broken=1
