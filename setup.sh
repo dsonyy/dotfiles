@@ -178,7 +178,7 @@ ln -sfnT $DOTFILES/config/.claude/agents $HOME/.claude/agents
 ln -sfnT $DOTFILES/config/.claude/settings.json $HOME/.claude/settings.json
 
 step "claude code - plugins"
-claude plugin marketplace add "$DOTFILES/config"
+(cd "$(mktemp -d)" && claude plugin marketplace add --scope local "$DOTFILES/config")
 for p in "$DOTFILES"/config/plugins/*; do
     [ -d "$p" ] || continue
     claude plugin install "$(basename "$p")@dsonyy"
