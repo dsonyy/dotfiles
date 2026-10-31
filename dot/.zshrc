@@ -120,4 +120,4 @@ export NVM_DIR="$HOME/.nvm"
 
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-eval "$(/Users/szymonbednorz/.local/bin/mise activate zsh)" # added by https://mise.run/zsh
+if [ -x "$HOME/.local/bin/mise" ]; then eval "$("$HOME/.local/bin/mise" activate zsh)"; fi

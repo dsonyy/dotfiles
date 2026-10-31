@@ -91,7 +91,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -n \"$TELEGRAM_SESSION_HOOK\" ] && python3 $HOME/repos/dotfiles/config/hooks/telegram-session.py || true"
+            "command": "[ \"$(uname)\" = Linux ] && python3 $HOME/repos/dotfiles/config/hooks/telegram-session.py || true"
           }
         ]
       }
