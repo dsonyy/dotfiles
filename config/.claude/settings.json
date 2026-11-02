@@ -27,7 +27,7 @@
     "ask": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus",
+  "model": "claude-opus-5",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "SessionStart": [
