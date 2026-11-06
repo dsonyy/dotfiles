@@ -1,10 +1,62 @@
 {
-  "env": {
-    "CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION": "2000",
-    "CLAUDE_CODE_SANDBOXED": "1"
+  "enableAllProjectMcpServers" : true,
+  "enabledPlugins" : {
+    "mcps@dsonyy" : true
   },
-  "permissions": {
-    "allow": [
+  "env" : {
+    "CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION" : "2000",
+    "CLAUDE_CODE_SANDBOXED" : "1"
+  },
+  "extraKnownMarketplaces" : {
+    "dsonyy" : {
+      "source" : {
+        "path" : "~\/repos\/dotfiles\/config",
+        "source" : "directory"
+      }
+    }
+  },
+  "hooks" : {
+    "Notification" : [
+      {
+        "hooks" : [
+          {
+            "command" : "python3 $HOME\/repos\/dotfiles\/config\/hooks\/play.py",
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "PostToolUse" : [
+      {
+        "hooks" : [
+          {
+            "command" : "[ \"$(uname)\" = Linux ] && python3 $HOME\/repos\/dotfiles\/config\/hooks\/telegram-session.py || true",
+            "type" : "command"
+          }
+        ],
+        "matcher" : "Bash"
+      }
+    ],
+    "SessionStart" : [
+      {
+        "hooks" : [
+          {
+            "command" : "[ -f \"$HOME\/lessons\/index.md\" ] && { echo 'Contents of ~\/lessons\/index.md (open matching lessons before starting a task):'; cat \"$HOME\/lessons\/index.md\"; } || true",
+            "type" : "command"
+          }
+        ]
+      }
+    ]
+  },
+  "model" : "opus",
+  "modelSettings" : {
+    "claude-opus-5" : {
+      "effortLevel" : "medium"
+    }
+  },
+  "permissions" : {
+    "allow" : [
       "Bash",
       "Read",
       "Write",
@@ -23,161 +75,19 @@
       "mcp__microsoft-azure__*",
       "mcp__elasticsearch__*"
     ],
-    "deny": [],
-    "ask": [],
-    "defaultMode": "bypassPermissions"
-  },
-  "model": "claude-opus-5",
-  "enableAllProjectMcpServers": true,
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -f \"$HOME/lessons/index.md\" ] && { echo 'Contents of ~/lessons/index.md (open matching lessons before starting a task):'; cat \"$HOME/lessons/index.md\"; } || true"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
+    "ask" : [
+
     ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 $HOME/repos/dotfiles/config/hooks/play.py"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "PermissionRequest": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ \"$(uname)\" = Linux ] && python3 $HOME/repos/dotfiles/config/hooks/telegram-session.py || true"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "StopFailure": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -x \"$HOME/.config/iterm2/cc-status\" ] && \"$HOME/.config/iterm2/cc-status\" || true"
-          }
-        ]
-      }
+    "defaultMode" : "bypassPermissions",
+    "deny" : [
+
     ]
   },
-  "enabledPlugins": {
-    "mcps@dsonyy": true
+  "skipDangerousModePermissionPrompt" : true,
+  "theme" : "dark",
+  "voice" : {
+    "enabled" : true,
+    "mode" : "hold"
   },
-  "extraKnownMarketplaces": {
-    "dsonyy": {
-      "source": {
-        "source": "directory",
-        "path": "~/repos/dotfiles/config"
-      }
-    }
-  },
-  "modelSettings": {
-    "claude-opus-5": {
-      "effortLevel": "medium"
-    }
-  },
-  "voice": {
-    "enabled": true,
-    "mode": "hold"
-  },
-  "skipDangerousModePermissionPrompt": true,
-  "theme": "dark",
-  "voiceEnabled": true
+  "voiceEnabled" : true
 }
