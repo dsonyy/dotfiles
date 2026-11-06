@@ -56,8 +56,8 @@ Stop and ask before any of these, however confident you are. They are triggers, 
 
 ## Workflow orchestration
 
-- Spec-first: Enter plan mode for non-trivial tasks (3+ steps or architectural decisions).
-- Subagent strategy: Use subagents liberally to keep main context clean. Offload research and parallel analysis. One task per subagent.
+- Spec-first: design a feature with design-partner, then split and build it with plan-implementing. Use plan mode for smaller non-trivial tasks.
+- Subagents: use them for parallel work, noisy output and independent review, not to save context. One task per subagent.
 - Verification: Run tests, check build, suggest user verification. Ask: "Would a staff engineer approve this?"
 - Elegance: For non-trivial changes, pause and ask "is there a more elegant way?" Skip for simple fixes.
 - Autonomous bug fixing: When given a bug report, just fix it. Point at logs/errors, then resolve. Zero hand-holding.
