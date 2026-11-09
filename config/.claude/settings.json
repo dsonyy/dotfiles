@@ -1,62 +1,10 @@
 {
-  "enableAllProjectMcpServers" : true,
-  "enabledPlugins" : {
-    "mcps@dsonyy" : true
+  "env": {
+    "CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION": "2000",
+    "CLAUDE_CODE_SANDBOXED": "1"
   },
-  "env" : {
-    "CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION" : "2000",
-    "CLAUDE_CODE_SANDBOXED" : "1"
-  },
-  "extraKnownMarketplaces" : {
-    "dsonyy" : {
-      "source" : {
-        "path" : "~\/repos\/dotfiles\/config",
-        "source" : "directory"
-      }
-    }
-  },
-  "hooks" : {
-    "Notification" : [
-      {
-        "hooks" : [
-          {
-            "command" : "python3 $HOME\/repos\/dotfiles\/config\/hooks\/play.py",
-            "type" : "command"
-          }
-        ],
-        "matcher" : ""
-      }
-    ],
-    "PostToolUse" : [
-      {
-        "hooks" : [
-          {
-            "command" : "[ \"$(uname)\" = Linux ] && python3 $HOME\/repos\/dotfiles\/config\/hooks\/telegram-session.py || true",
-            "type" : "command"
-          }
-        ],
-        "matcher" : "Bash"
-      }
-    ],
-    "SessionStart" : [
-      {
-        "hooks" : [
-          {
-            "command" : "[ -f \"$HOME\/lessons\/index.md\" ] && { echo 'Contents of ~\/lessons\/index.md (open matching lessons before starting a task):'; cat \"$HOME\/lessons\/index.md\"; } || true",
-            "type" : "command"
-          }
-        ]
-      }
-    ]
-  },
-  "model" : "opus",
-  "modelSettings" : {
-    "claude-opus-5" : {
-      "effortLevel" : "medium"
-    }
-  },
-  "permissions" : {
-    "allow" : [
+  "permissions": {
+    "allow": [
       "Bash",
       "Read",
       "Write",
@@ -75,19 +23,74 @@
       "mcp__microsoft-azure__*",
       "mcp__elasticsearch__*"
     ],
-    "ask" : [
-
+    "deny": [],
+    "ask": [],
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "opus",
+  "enableAllProjectMcpServers": true,
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $HOME/repos/dotfiles/config/hooks/play.py"
+          }
+        ]
+      }
     ],
-    "defaultMode" : "bypassPermissions",
-    "deny" : [
-
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(uname)\" = Linux ] && python3 $HOME/repos/dotfiles/config/hooks/telegram-session.py || true"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -f \"$HOME/lessons/index.md\" ] && { echo 'Contents of ~/lessons/index.md (open matching lessons before starting a task):'; cat \"$HOME/lessons/index.md\"; } || true"
+          }
+        ]
+      }
     ]
   },
-  "skipDangerousModePermissionPrompt" : true,
-  "theme" : "dark",
-  "voice" : {
-    "enabled" : true,
-    "mode" : "hold"
+  "enabledPlugins": {
+    "mcps@dsonyy": true
   },
-  "voiceEnabled" : true
+  "extraKnownMarketplaces": {
+    "dsonyy": {
+      "source": {
+        "source": "directory",
+        "path": "~/repos/dotfiles/config"
+      }
+    }
+  },
+  "modelSettings": {
+    "claude-opus-5": {
+      "effortLevel": "medium"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "advisorModel": "fable",
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "voiceEnabled": true
 }
