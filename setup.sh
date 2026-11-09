@@ -234,4 +234,9 @@ ln -sfnT "$DOTFILES/services/navidrome/navidrome.service" "$HOME/.config/systemd
 systemctl --user daemon-reload
 systemctl --user enable --now navidrome
 
+step "cam-watch"
+ln -sfnT "$DOTFILES/services/cam-watch/cam-watch.service" "$HOME/.config/systemd/user/cam-watch.service"
+systemctl --user daemon-reload
+systemctl --user enable --now cam-watch
+
 step "DONE"
