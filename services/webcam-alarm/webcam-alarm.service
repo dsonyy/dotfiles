@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 EnvironmentFile=%h/repos/dotfiles/.env
-ExecStart=/usr/bin/python3 %h/repos/dotfiles/services/cam-watch/watch.py
+ExecStart=/usr/bin/python3 %h/repos/dotfiles/services/webcam-alarm/watch.py
 Restart=always
 RestartSec=10
 
