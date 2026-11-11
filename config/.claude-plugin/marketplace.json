@@ -12,6 +12,10 @@
     {
       "name": "pin-bar",
       "source": "./plugins/pin-bar"
+    },
+    {
+      "name": "paste-image",
+      "source": "./plugins/paste-image"
     }
   ],
   "renames": {

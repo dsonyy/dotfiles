@@ -1,0 +1,5 @@
+{
+  "name": "paste-image",
+  "version": "0.1.0",
+  "description": "Draw images pasted into the prompt inline in the transcript, converted to PNG and kept under 1 MB."
+}

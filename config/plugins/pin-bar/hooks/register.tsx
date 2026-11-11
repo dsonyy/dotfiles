@@ -1,17 +1,12 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { Register } from 'claude-code'
 
-import type { Pins, Shot, Spend, Step } from '../types'
+import type { Pins, Spend, Step } from '../types'
 
 const EMPTY: Pins = { items: [], current: 0 }
 const pins = atom({ plugin: 'pin-bar', key: 'pins' } as const, EMPTY, { shape: 'pins-1' })
 
 const steps = atom({ plugin: 'pin-bar', key: 'steps' } as const, [] as Step[], { shape: 'steps-1' })
-const shots = atom({ plugin: 'pin-bar', key: 'shots' } as const, [] as Shot[], { shape: 'shots-1' })
-
-const SHOT_DIR = '/tmp/pin-bar'
-const SHOT_LIMIT = 1024 * 1024
-const SHOT_COLUMNS = 60
 
 const oneLine = (text: string) =>
   text
@@ -51,88 +46,7 @@ const spendOf = (list: Step[], text: string) => {
   return undefined
 }
 
-type ImageTool = {
-  toPng: (input: string, output: string) => string[]
-  shrink: (file: string, maxSide: number) => string[]
-  size: (file: string) => string[]
-}
-
-const SIPS: ImageTool = {
-  toPng: (input, output) => ['sips', '-s', 'format', 'png', input, '--out', output],
-  shrink: (file, maxSide) => ['sips', '-Z', `${maxSide}`, file],
-  size: file => ['sips', '-g', 'pixelWidth', '-g', 'pixelHeight', file],
-}
-
-const MAGICK: ImageTool = {
-  toPng: (input, output) => ['magick', input, output],
-  shrink: (file, maxSide) => ['magick', file, '-resize', `${maxSide}x${maxSide}>`, file],
-  size: file => ['magick', 'identify', '-format', 'pixelWidth: %w\npixelHeight: %h', file],
-}
-
-const pickTool = async ($: EngineInterface) => {
-  for (const tool of [SIPS, MAGICK]) {
-    const probe = await $.process.run(['sh', '-c', `command -v ${tool.toPng('', '')[0]}`])
-    if (probe.exitCode === 0) return tool
-  }
-  return undefined
-}
-
-const dimensions = async ($: EngineInterface, tool: ImageTool, file: string) => {
-  const { stdout } = await $.process.run(tool.size(file))
-  const width = Number(/pixelWidth:\s*(\d+)/.exec(stdout)?.[1] ?? 0)
-  const height = Number(/pixelHeight:\s*(\d+)/.exec(stdout)?.[1] ?? 0)
-  return { width, height }
-}
-
-const readAll = async ($: EngineInterface, id: string) => {
-  let base64 = ''
-  let offset: number | undefined
-  do {
-    const media = await $.prompt.media({ id, offset })
-    if (!('base64' in media)) return undefined
-    base64 += media.base64
-    offset = media.next
-  } while (offset !== undefined)
-  return base64
-}
-
-const savePng = async ($: EngineInterface, tool: ImageTool, base64: string, name: string, mediaType: string) => {
-  const raw = `${SHOT_DIR}/${name}.${mediaType.replace('image/', '') || 'bin'}`
-  const png = `${SHOT_DIR}/${name}.png`
-  await $.process.run(['sh', '-c', `mkdir -p "$1" && base64 -d > "$2"`, 'sh', SHOT_DIR, raw], { stdin: base64 })
-  const converted = await $.process.run(tool.toPng(raw, png))
-  if (converted.exitCode !== 0) return undefined
-
-  let { width, height } = await dimensions($, tool, png)
-  for (let i = 0; i < 6 && (await $.fs.stat(png)).size > SHOT_LIMIT; i++) {
-    await $.process.run(tool.shrink(png, Math.round(Math.max(width, height) * 0.7)))
-    ;({ width, height } = await dimensions($, tool, png))
-  }
-  return width && height ? { file: png, width, height } : undefined
-}
-
 export const register: Register = on => {
-  on('prompt.submit', async ($, e, next) => {
-    const images = (e.attachments ?? []).filter(item => item.type === 'image' && item.id)
-    if (images.length === 0) return next(e)
-
-    const tool = await pickTool($)
-    if (!tool) {
-      $.ui.toast('No image converter found: install ImageMagick')
-      return next(e)
-    }
-    const text = oneLine(e.text)
-    const stamp = await $.clock.now()
-    const saved: Shot[] = []
-    for (const [i, image] of images.entries()) {
-      const base64 = await readAll($, image.id ?? '')
-      const png = base64 && (await savePng($, tool, base64, `${stamp}-${i}`, image.mediaType ?? ''))
-      if (png) saved.push({ text, ...png })
-    }
-    if (saved.length > 0) await update($, shots, list => [...list, ...saved].slice(-50))
-    return next(e)
-  })
-
   on('turn.step', async function* ($, e, next) {
     if (e.agentId) return yield* next(e)
 
@@ -190,30 +104,11 @@ export const register: Register = on => {
   on('ui.render', { component: 'UserMessage' }, async ($, e, next) => {
     if (e.props.origin.kind !== 'composer' || e.props.isExpanded) return next(e)
 
-    const text = oneLine(e.props.text)
-    const mine = e.surface === 'terminal' ? (await read($, shots)).filter(shot => shot.text === text) : []
-    const columns = Math.min(SHOT_COLUMNS, (e.viewport?.columns ?? SHOT_COLUMNS) - 4)
     const { Box, Text } = $.ui.resolve(e)
 
     return (
-      <Box flexDirection="column">
-        <Box width="100%" backgroundColor="claude" paddingX={1}>
-          <Text color="inverseText">{`> ${e.props.text}`}</Text>
-        </Box>
-        {e.surface === 'terminal'
-          ? mine.map(shot => {
-              const { Image } = $.ui.resolve(e)
-              return (
-                <Image
-                  key={shot.file}
-                  source={{ file: shot.file, format: 'png' }}
-                  columns={columns}
-                  rows={Math.max(1, Math.round((columns * shot.height) / shot.width / 2))}
-                  alt={`[image ${shot.width}x${shot.height}]`}
-                />
-              )
-            })
-          : null}
+      <Box width="100%" backgroundColor="claude" paddingX={1}>
+        <Text color="inverseText">{`> ${e.props.text}`}</Text>
       </Box>
     )
   })
