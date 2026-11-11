@@ -9,8 +9,11 @@
       "url": "https://api.raindrop.io/rest/v2/ai/mcp"
     },
     "paper": {
-      "type": "http",
-      "url": "http://127.0.0.1:29979/mcp"
+      "type": "stdio",
+      "command": "/Applications/Paper.app/Contents/Resources/app.asar.unpacked/dist/cli-bin/darwin-arm64/paper",
+      "args": [
+        "mcp"
+      ]
     }
   }
 }
