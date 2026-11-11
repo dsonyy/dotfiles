@@ -3,9 +3,10 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
 
-const shots = atom({ plugin: 'paste-image', key: 'shots' } as const, {} as Record<string, Shot>, { shape: 'shots-3' })
+const shots = atom({ plugin: 'paste-image', key: 'shots' } as const, {} as Record<string, Shot>, { shape: 'shots-4' })
 
-const SHOT_DIR = '/tmp/paste-image'
+const PICTURES = 'Pictures/ClaudeCode'
+const RASTER_DIR = '/tmp/paste-image'
 const rasters = new Map<string, Raster>()
 
 type Raster = { columns: number; rows: number; cells: string }
@@ -70,19 +71,28 @@ const readAll = async ($: EngineInterface, id: string) => {
   return base64
 }
 
-const savePng = async ($: EngineInterface, tool: ImageTool, base64: string, name: string, mediaType: string) => {
-  const raw = `${SHOT_DIR}/${name}.${mediaType.replace('image/', '') || 'bin'}`
-  const png = `${SHOT_DIR}/${name}.png`
-  await $.process.run(['sh', '-c', `mkdir -p "$1" && base64 -d > "$2"`, 'sh', SHOT_DIR, raw], { stdin: base64 })
-  const converted = await $.process.run(tool.toPng(raw, png))
+const stampName = (now: number) => {
+  const d = new Date(now)
+  const two = (n: number) => `${n}`.padStart(2, '0')
+  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}_${two(d.getHours())}-${two(d.getMinutes())}-${two(d.getSeconds())}`
+}
+
+const savePng = async ($: EngineInterface, tool: ImageTool, base64: string, name: string, mediaType: string): Promise<Shot | undefined> => {
+  const dir = `${(await $.env.get('HOME')) ?? '/tmp'}/${PICTURES}`
+  const extension = mediaType.replace('image/', '').replace('jpeg', 'jpg') || 'bin'
+  const original = `${dir}/${name}-original.${extension}`
+  const png = `${dir}/${name}.png`
+  await $.process.run(['sh', '-c', `mkdir -p "$1" && base64 -d > "$2"`, 'sh', dir, original], { stdin: base64 })
+  const converted = await $.process.run(tool.toPng(original, png))
   if (converted.exitCode !== 0) return undefined
 
-  let { width, height } = await dimensions($, tool, png)
+  const { width, height } = await dimensions($, tool, png)
+  let side = Math.max(width, height)
   for (let i = 0; i < 6 && (await $.fs.stat(png)).size > SHOT_LIMIT; i++) {
-    await $.process.run(tool.shrink(png, Math.round(Math.max(width, height) * 0.7)))
-    ;({ width, height } = await dimensions($, tool, png))
+    side = Math.round(side * 0.7)
+    await $.process.run(tool.shrink(png, side))
   }
-  return width && height ? { file: png, width, height } : undefined
+  return width && height ? { file: png, original, width, height } : undefined
 }
 
 const bmpPixel = (bmp: Uint8Array, x: number, y: number) => {
@@ -99,7 +109,8 @@ const bmpPixel = (bmp: Uint8Array, x: number, y: number) => {
 
 const rasterize = async ($: EngineInterface, tool: ImageTool, shot: Shot, columns: number): Promise<Raster | undefined> => {
   const rows = Math.max(1, Math.min(MAX_ROWS, Math.round((columns * shot.height) / shot.width / 2)))
-  const bmp = `${shot.file}.bmp`
+  const bmp = `${RASTER_DIR}/${columns}x${rows}-${shot.file.split('/').pop()}.bmp`
+  await $.process.run(['mkdir', '-p', RASTER_DIR])
   const made = await $.process.run(tool.toBmp(shot.file, bmp, columns, rows * 2))
   if (made.exitCode !== 0) return undefined
 
@@ -143,8 +154,8 @@ export const register: Register = on => {
     for (const [i, image] of images.entries()) {
       const id = `${stamp}-${i}`
       const base64 = await readAll($, image.id ?? '')
-      const png = base64 && (await savePng($, tool, base64, id, image.mediaType ?? ''))
-      if (png) saved[id] = png
+      const shot = base64 && (await savePng($, tool, base64, `${stampName(stamp)}-${i + 1}`, image.mediaType ?? ''))
+      if (shot) saved[id] = shot
     }
     await update($, shots, all => Object.fromEntries(Object.entries({ ...all, ...saved }).slice(-20)))
 
@@ -179,7 +190,7 @@ export const register: Register = on => {
             dimColor
             label="copy path"
             onPress={async press => {
-              const copied = await $.ui.copy({ text: shot.file, surface: press.surface })
+              const copied = await $.ui.copy({ text: shot.original, surface: press.surface })
               $.ui.toast(copied.isCopied ? 'Path copied' : copied.reason)
             }}
           />
@@ -196,7 +207,7 @@ export const register: Register = on => {
             key={`open:${e.props.id}`}
             dimColor
             label={`open ${shot.width}x${shot.height}`}
-            onPress={() => openImage($, shot.file)}
+            onPress={() => openImage($, shot.original)}
           />
         </Box>
       </Box>

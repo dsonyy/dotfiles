@@ -1,4 +1,4 @@
-export type Shot = { file: string; width: number; height: number }
+export type Shot = { file: string; original: string; width: number; height: number }
 
 declare module 'claude-code' {
   interface PluginState {
