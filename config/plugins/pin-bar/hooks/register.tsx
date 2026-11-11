@@ -1,13 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Pins, Spend, Usage } from '../types'
+import type { Pins, Spend, Step } from '../types'
 
 const EMPTY: Pins = { items: [], current: 0 }
 const pins = atom({ plugin: 'pin-bar', key: 'pins' } as const, EMPTY, { shape: 'pins-1' })
 
-const NO_USAGE: Usage = { byRow: {}, pending: [], unclaimed: null }
-const usage = atom({ plugin: 'pin-bar', key: 'usage' } as const, NO_USAGE, { shape: 'usage-1' })
+const steps = atom({ plugin: 'pin-bar', key: 'steps' } as const, [] as Step[], { shape: 'steps-1' })
 
 const oneLine = (text: string) =>
   text
@@ -37,23 +36,24 @@ const tokens = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`)
 
 const spent = (spend: Spend) => `$${spend.usd.toFixed(3)} | ${tokens(spend.in)} in | ${tokens(spend.out)} out`
 
-const attached = (state: Usage, rows: string[], spend: Spend): Record<string, Spend> => {
-  const byRow = { ...state.byRow }
-  for (const row of rows) byRow[row] = spend
-  const keys = Object.keys(byRow)
-  for (const key of keys.slice(0, Math.max(keys.length - 500, 0))) delete byRow[key]
-  return byRow
+const spendOf = (list: Step[], text: string) => {
+  const needle = oneLine(text)
+  if (!needle) return undefined
+  for (let i = list.length - 1; i >= 0; i--) {
+    const step = list[i]
+    if (step && oneLine(step.answer).includes(needle)) return step.spend
+  }
+  return undefined
 }
 
 export const register: Register = on => {
   on('turn.step', async function* ($, e, next) {
     if (e.agentId) return yield* next(e)
 
-    await update($, usage, state => ({ ...state, pending: [], unclaimed: null }))
     const before = (await $.session.usage()).cost?.usd ?? 0
     const result = yield* next(e)
     const after = (await $.session.usage()).cost?.usd ?? 0
-    if (!result.usage) return result
+    if (!result.usage || !result.answer) return result
 
     const { input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens } = result.usage
     const spend: Spend = {
@@ -61,32 +61,16 @@ export const register: Register = on => {
       in: input_tokens + cache_read_input_tokens + cache_creation_input_tokens,
       usd: Math.max(after - before, 0),
     }
-    await update($, usage, state =>
-      state.pending.length > 0
-        ? { byRow: attached(state, state.pending, spend), pending: [], unclaimed: null }
-        : { ...state, unclaimed: spend },
-    )
+    await update($, steps, list => [...list, { answer: result.answer, spend }].slice(-200))
     return result
-  })
-
-  on('session.append', { door: 'response' }, async ($, e, next) => {
-    if (e.agentId || e.message.role !== 'assistant') return next(e)
-
-    await update($, usage, state =>
-      state.unclaimed
-        ? { ...state, byRow: attached(state, [e.uuid], state.unclaimed) }
-        : { ...state, pending: [...state.pending, e.uuid] },
-    )
-    return next(e)
   })
 
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
     if (e.props.isSummary) return next(e)
 
     const { items } = await read($, pins)
-    const { byRow } = await read($, usage)
     const isPinned = items.some(pin => pin.id === e.requestId)
-    const spend = byRow[e.requestId]
+    const spend = spendOf(await read($, steps), e.props.text)
     const { Box, Button, Text } = $.ui.resolve(e)
     const text = oneLine(e.props.text)
 
