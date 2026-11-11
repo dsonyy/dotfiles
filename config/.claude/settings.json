@@ -64,7 +64,8 @@
     ]
   },
   "enabledPlugins": {
-    "mcps@dsonyy": true
+    "mcps@dsonyy": true,
+    "pin-message@dsonyy": true
   },
   "extraKnownMarketplaces": {
     "dsonyy": {

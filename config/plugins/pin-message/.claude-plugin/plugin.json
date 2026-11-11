@@ -1,0 +1,6 @@
+{
+  "name": "pin-message",
+  "version": "0.1.0",
+  "description": "Pin Claude's messages and jump back to them from a bar above the prompt.",
+  "types": "./types/index.d.ts"
+}

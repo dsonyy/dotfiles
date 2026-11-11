@@ -1,8 +1,17 @@
 {
   "name": "dsonyy",
   "description": "Vendored agent plugins from dotfiles",
-  "owner": { "name": "dsonyy" },
+  "owner": {
+    "name": "dsonyy"
+  },
   "plugins": [
-    { "name": "mcps", "source": "./plugins/mcps" }
+    {
+      "name": "mcps",
+      "source": "./plugins/mcps"
+    },
+    {
+      "name": "pin-message",
+      "source": "./plugins/pin-message"
+    }
   ]
 }
