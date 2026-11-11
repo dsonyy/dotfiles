@@ -6,3 +6,4 @@ skills/synced/
 .env
 .venv/
 secrets/
+.DS_Store
