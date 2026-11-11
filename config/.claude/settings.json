@@ -27,7 +27,7 @@
     "ask": [],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus",
+  "model": "fable",
   "enableAllProjectMcpServers": true,
   "hooks": {
     "Notification": [
