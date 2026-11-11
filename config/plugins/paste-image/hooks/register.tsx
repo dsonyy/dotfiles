@@ -169,9 +169,11 @@ export const register: Register = on => {
     const { Box, Button, Raster } = $.ui.resolve(e)
 
     return (
-      <Box flexDirection="column">
-        <Raster key={`shot:${e.props.id}`} columns={raster.columns} rows={raster.rows} cells={raster.cells} />
-        <Box gap={1}>
+      <Box flexDirection="column" width="100%">
+        <Box justifyContent="center">
+          <Raster key={`shot:${e.props.id}`} columns={raster.columns} rows={raster.rows} cells={raster.cells} />
+        </Box>
+        <Box justifyContent="flex-end" gap={1}>
           <Button
             key={`path:${e.props.id}`}
             dimColor
