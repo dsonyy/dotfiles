@@ -10,8 +10,11 @@
       "source": "./plugins/mcps"
     },
     {
-      "name": "pin-message",
-      "source": "./plugins/pin-message"
+      "name": "pin-bar",
+      "source": "./plugins/pin-bar"
     }
-  ]
+  ],
+  "renames": {
+    "pin-message": "pin-bar"
+  }
 }

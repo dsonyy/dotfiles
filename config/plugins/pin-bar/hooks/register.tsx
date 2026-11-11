@@ -4,10 +4,10 @@ import type { Register } from 'claude-code'
 import type { Pins, Spend, Usage } from '../types'
 
 const EMPTY: Pins = { items: [], current: 0 }
-const pins = atom({ plugin: 'pin-message', key: 'pins' } as const, EMPTY, { shape: 'pins-1' })
+const pins = atom({ plugin: 'pin-bar', key: 'pins' } as const, EMPTY, { shape: 'pins-1' })
 
 const NO_USAGE: Usage = { byRow: {}, pending: [], unclaimed: null }
-const usage = atom({ plugin: 'pin-message', key: 'usage' } as const, NO_USAGE, { shape: 'usage-1' })
+const usage = atom({ plugin: 'pin-bar', key: 'usage' } as const, NO_USAGE, { shape: 'usage-1' })
 
 const oneLine = (text: string) =>
   text

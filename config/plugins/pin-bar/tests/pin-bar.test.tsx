@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 const message = (requestId: string, text: string) =>
   ({
-    plugin: 'pin-message',
+    plugin: 'pin-bar',
     component: 'AssistantMessage',
     requestId,
     surface: 'terminal',
@@ -10,7 +10,7 @@ const message = (requestId: string, text: string) =>
   }) as const
 
 const BAND = {
-  plugin: 'pin-message',
+  plugin: 'pin-bar',
   component: 'AbovePrompt',
   requestId: 'band',
   surface: 'terminal',
@@ -36,8 +36,8 @@ test('pinning fills the bar, cycling wraps, unpinning empties it', async ($, on)
   expect((await first.find({ type: 'Button', key: 'pin:m1' }))?.text).toBe('📌 pin')
   expect((await first.find({ type: 'Button', key: 'copy:m1' }))?.text).toBe('copy')
 
-  await $.ui.press({ plugin: 'pin-message', key: 'pin:m1' })
-  await $.ui.press({ plugin: 'pin-message', key: 'pin:m2' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'pin:m1' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'pin:m2' })
   expect((await first.find({ type: 'Button', key: 'pin:m1' }))?.text).toBe('📌 unpin')
 
   const band = await $.ui.mount(BAND)
@@ -46,15 +46,15 @@ test('pinning fills the bar, cycling wraps, unpinning empties it', async ($, on)
     '📌 Run mise install, then just dev up again.',
   )
 
-  await $.ui.press({ plugin: 'pin-message', key: 'cycle' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'cycle' })
   expect((await band.find({ type: 'Button', key: 'cycle' }))?.text).toBe('2/2')
   expect((await band.find({ type: 'Button', key: 'jump' }))?.text).toBe(`📌 ${'B'.repeat(51)}…`)
 
-  await $.ui.press({ plugin: 'pin-message', key: 'cycle' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'cycle' })
   expect((await band.find({ type: 'Button', key: 'cycle' }))?.text).toBe('1/2')
 
-  await $.ui.press({ plugin: 'pin-message', key: 'pin:m1' })
-  await $.ui.press({ plugin: 'pin-message', key: 'pin:m2' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'pin:m1' })
+  await $.ui.press({ plugin: 'pin-bar', key: 'pin:m2' })
   expect(await band.find({ type: 'Button', key: 'cycle' })).toBeUndefined()
 
   await band.unmount()

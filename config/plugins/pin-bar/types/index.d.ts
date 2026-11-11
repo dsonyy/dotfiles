@@ -5,6 +5,6 @@ export type Usage = { byRow: Record<string, Spend>; pending: string[]; unclaimed
 
 declare module 'claude-code' {
   interface PluginState {
-    'pin-message': { pins: Shaped<Pins>; usage: Shaped<Usage> }
+    'pin-bar': { pins: Shaped<Pins>; usage: Shaped<Usage> }
   }
 }
