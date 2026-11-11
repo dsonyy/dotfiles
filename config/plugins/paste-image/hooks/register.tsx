@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Shot } from '../types'
 
-const shots = atom({ plugin: 'paste-image', key: 'shots' } as const, {} as Record<string, Shot>, { shape: 'shots-1' })
+const shots = atom({ plugin: 'paste-image', key: 'shots' } as const, {} as Record<string, Shot>, { shape: 'shots-2' })
 
 const SHOT_DIR = '/tmp/paste-image'
 const SHOT_LIMIT = 1024 * 1024
@@ -66,7 +66,9 @@ const savePng = async ($: EngineInterface, tool: ImageTool, base64: string, name
     await $.process.run(tool.shrink(png, Math.round(Math.max(width, height) * 0.7)))
     ;({ width, height } = await dimensions($, tool, png))
   }
-  return width && height ? { file: png, width, height } : undefined
+  if (!width || !height) return undefined
+  const encoded = await $.process.run(['base64', '-i', png])
+  return encoded.exitCode === 0 ? { png: encoded.stdout.replace(/\s+/g, ''), width, height } : undefined
 }
 
 export const register: Register = on => {
@@ -103,8 +105,8 @@ export const register: Register = on => {
 
     return (
       <Image
-        key={shot.file}
-        source={{ file: shot.file, format: 'png' }}
+        key={e.props.id}
+        source={{ png: shot.png }}
         columns={columns}
         rows={Math.max(1, Math.round((columns * shot.height) / shot.width / 2))}
         alt={`[image ${shot.width}x${shot.height}]`}
