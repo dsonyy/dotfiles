@@ -43,7 +43,7 @@ Used when asked to write up a session or work and no other form is named.
 - Keep dead ends and mistakes: what failed, why, and how it was fixed.
 - No length limit. As long as the content needs.
 - End with where the results are and what is still open.
-- Save to `~/brain/projects/<project>/SUMMARY.md`. Link the project's data folder if it has one.
+- Save to `SUMMARY.md` in the project's directory in the brain. Link the project's data folder if it has one.
 
 ## Before saving
 
