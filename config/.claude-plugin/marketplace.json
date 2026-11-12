@@ -16,6 +16,10 @@
     {
       "name": "paste-image",
       "source": "./plugins/paste-image"
+    },
+    {
+      "name": "blink-reply",
+      "source": "./plugins/blink-reply"
     }
   ],
   "renames": {

@@ -76,7 +76,8 @@
   "enabledPlugins": {
     "mcps@dsonyy": true,
     "pin-bar@dsonyy": true,
-    "paste-image@dsonyy": true
+    "paste-image@dsonyy": true,
+    "blink-reply@dsonyy": true
   },
   "extraKnownMarketplaces": {
     "dsonyy": {

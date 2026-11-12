@@ -1,0 +1,6 @@
+{
+  "name": "blink-reply",
+  "version": "0.1.0",
+  "description": "Blinks a border around the last reply until you type or click it",
+  "types": "./types/index.d.ts"
+}
