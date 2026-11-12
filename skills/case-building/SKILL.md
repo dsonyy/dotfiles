@@ -1,35 +1,25 @@
 ---
 name: case-building
-description: Build a case for a bug or product problem at Conduct - the Linear ticket, linked PRs, a problem description and a clear repro, saved as one directory in the brain. Use when the user asks to build, open or write up a case, to reproduce a reported problem and document it, or to prepare a bug for handoff to another agent or person.
+description: Build a case for a bug or product problem at Conduct - the problem with a repro and the solution with before and after, linked to the Linear ticket and the PRs, saved as one directory in the brain. Use when the user asks to build, open or write up a case, to reproduce a reported problem and document it, or to prepare a bug for handoff to another agent or person.
 ---
 
 # Case building
 
-A case is one directory that lets someone who was not there see the problem and reproduce it.
-Build as much of it as the evidence allows, and say what is missing.
+A case is one directory in the brain, `<YYYY-MM-DD> <short title>/`, that shows someone who was not there what the problem is and where to look.
 
-## Directory
+## Files
 
-`<YYYY-MM-DD> <short title>/` in the brain
-
-- `Case.md`
-- `screenshots/`
-- `test-files/`: inputs used and outputs produced
-- `Details.md`: only when needed, for code references, raw evidence, fix scope and open questions
-
-## Case.md, in this order
-
-1. Ticket: the Linear link, or "none". Search Linear before writing "none". Do not create or edit a ticket unless asked.
-2. PRs: those linked on the ticket or found by its ID, or "none".
-3. Problem: what the user sees and what they should see, in two or three sentences. Then one paragraph on the cause, if known.
-4. Repro: numbered steps from a clean start with the exact inputs, ending in expected versus actual. If it did not reproduce, say so and what was tried.
+- `Case.md`: the problem. Ticket and PR links, what the user sees and what they should see, repro steps ending in expected versus actual.
+- `Solution.md`: the fix. Before and after from the same repro, and where the change is. Written once a fix exists.
+- Optional: `screenshots/`, `test-files/` for inputs and outputs, anything else the reader needs.
 
 ## Rules
 
-- Reproduce it yourself in the local app, the way a user would, before writing the repro. Steps copied from a report are a claim.
-- Open Case.md with the one or two screenshots that show the fault, cropped to it, each with a line saying where to look. All other screenshots go at the end.
+- Minimal. Only what the reader needs to understand the problem and know where to look. Link, do not repeat: the ticket, the PR and the code say their own part.
+- Show it. Lead with a screenshot cropped to the fault, a table or another visual, with one line saying where to look.
+- Reproduce it yourself in the local app, the way a user would, and take before and after from that run. Say when something was read from code or reported, not seen.
 - Development or synthetic data only. Customer findings as counts, never names or values.
-- Mark each fact as seen first-hand, read from code, or reported by someone.
-- Record anything changed by accident during the repro.
+- Linear is the product side: what the user sees, who it affects, what they should get. GitHub is the technical side, written as the repository's pull request guide says. Search both before writing "none". Create or edit them only when asked.
+- Record anything the repro changed.
 
-Finish with the directory path and the list of what is missing.
+Finish with the directory path and what is missing.
