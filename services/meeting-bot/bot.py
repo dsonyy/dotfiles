@@ -25,6 +25,7 @@ SESSIONS = Path.home() / ".cache/telegram-sessions"
 ACTIVE = SESSIONS / "active.json"
 FILES = SESSIONS / "files"
 CLAUDE_DIR = Path.home() / ".claude"
+DISARMED = Path.home() / ".alarm"
 
 log = logging.getLogger("meetings")
 RESUMES = threading.Lock()
@@ -190,11 +191,32 @@ def resume(session: dict) -> dict | None:
     return started and activate(session | started)
 
 
-def pick_session(query: dict) -> None:
+def alarm_status() -> tuple[str, str]:
+    on = not DISARMED.exists()
+    button = {"text": "Turn off" if on else "Turn on", "callback_data": "alarm:off" if on else "alarm:on"}
+    return f"Alarm is {'on' if on else 'off'}.", json.dumps({"inline_keyboard": [[button]]})
+
+
+def show_alarm() -> None:
+    text, markup = alarm_status()
+    reply(text, reply_markup=markup)
+
+
+def set_alarm(query: dict) -> None:
+    DISARMED.touch() if query["data"] == "alarm:off" else DISARMED.unlink(missing_ok=True)
+    text, markup = alarm_status()
+    api("editMessageText", chat_id=CHAT_ID, message_id=query["message"]["message_id"], text=f"<i>{html.escape(text)}</i>", parse_mode="HTML", reply_markup=markup)
+    log.info(f"alarm set: {text}")
+
+
+def answer(query: dict) -> None:
     try:
         api("answerCallbackQuery", callback_query_id=query["id"])
     except urllib.error.HTTPError:
         log.info("callback query expired")
+
+
+def pick_session(query: dict) -> None:
     global awaiting_path
     if query["data"] == "new":
         show_dirs()
@@ -228,6 +250,9 @@ def deliver(session: dict, text: str) -> None:
 
 def forward(msg: dict) -> None:
     global awaiting_path
+    if msg["text"].startswith("/alarm"):
+        show_alarm()
+        return
     if msg["text"].startswith("/sessions"):
         awaiting_path = False
         show_sessions()
@@ -296,7 +321,7 @@ def write_transcript(msg: dict, media: dict) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    api("setMyCommands", commands=json.dumps([{"command": "sessions", "description": "Pick an agent session"}]), scope=json.dumps({"type": "all_private_chats"}))
+    api("setMyCommands", commands=json.dumps([{"command": "sessions", "description": "Pick an agent session"}, {"command": "alarm", "description": "Turn the camera alarm on or off"}]), scope=json.dumps({"type": "all_private_chats"}))
     offset = 0
     while True:
         try:
@@ -314,7 +339,11 @@ def main() -> None:
             if chat != CHAT_ID:
                 continue
             try:
-                pick_session(query) if query else handle(msg)
+                if query:
+                    answer(query)
+                    set_alarm(query) if query["data"].startswith("alarm:") else pick_session(query)
+                else:
+                    handle(msg)
             except Exception as e:
                 log.exception("handling failed")
                 reply(f"Error: {e}")
