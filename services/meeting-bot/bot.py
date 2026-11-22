@@ -1,3 +1,4 @@
+import fcntl
 import html
 import json
 import logging
@@ -26,6 +27,7 @@ ACTIVE = SESSIONS / "active.json"
 FILES = SESSIONS / "files"
 CLAUDE_DIR = Path.home() / ".claude"
 DISARMED = Path.home() / ".alarm"
+CAMERA_LOCK = Path("/tmp/camera.lock")
 
 log = logging.getLogger("meetings")
 RESUMES = threading.Lock()
@@ -194,7 +196,8 @@ def resume(session: dict) -> dict | None:
 def alarm_status() -> tuple[str, str]:
     on = not DISARMED.exists()
     button = {"text": "Turn off" if on else "Turn on", "callback_data": "alarm:off" if on else "alarm:on"}
-    return f"Alarm is {'on' if on else 'off'}.", json.dumps({"inline_keyboard": [[button]]})
+    photo = {"text": "Take photo", "callback_data": "photo"}
+    return f"Alarm is {'on' if on else 'off'}.", json.dumps({"inline_keyboard": [[button, photo]]})
 
 
 def show_alarm() -> None:
@@ -207,6 +210,31 @@ def set_alarm(query: dict) -> None:
     text, markup = alarm_status()
     api("editMessageText", chat_id=CHAT_ID, message_id=query["message"]["message_id"], text=f"<i>{html.escape(text)}</i>", parse_mode="HTML", reply_markup=markup)
     log.info(f"alarm set: {text}")
+
+
+def take_photo() -> bytes:
+    # webcam-alarm holds the same lock while it opens the exclusive camera
+    with CAMERA_LOCK.open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        return subprocess.run(
+            ["ffmpeg", "-loglevel", "error", "-fflags", "nobuffer", "-f", "v4l2", "-input_format", "mjpeg",
+             "-video_size", "1280x720", "-i", "/dev/video0", "-frames:v", "1", "-c:v", "copy", "-f", "mjpeg", "-"],
+            capture_output=True, check=True,
+        ).stdout
+
+
+def send_photo() -> None:
+    try:
+        jpeg = take_photo()
+    except subprocess.CalledProcessError as e:
+        reply(f"Camera failed: {e.stderr.decode().strip()}")
+        return
+    boundary = os.urandom(16).hex()
+    body = f'--{boundary}\r\nContent-Disposition: form-data; name="photo"; filename="cam.jpg"\r\n\r\n'.encode()
+    body += jpeg + f"\r\n--{boundary}--\r\n".encode()
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    with urllib.request.urlopen(urllib.request.Request(f"{API}/sendPhoto?chat_id={CHAT_ID}", body, headers), timeout=90) as resp:
+        log.info(f"photo sent: {json.load(resp)['result']['message_id']}")
 
 
 def answer(query: dict) -> None:
@@ -341,7 +369,12 @@ def main() -> None:
             try:
                 if query:
                     answer(query)
-                    set_alarm(query) if query["data"].startswith("alarm:") else pick_session(query)
+                    if query["data"] == "photo":
+                        send_photo()
+                    elif query["data"].startswith("alarm:"):
+                        set_alarm(query)
+                    else:
+                        pick_session(query)
                 else:
                     handle(msg)
             except Exception as e:
