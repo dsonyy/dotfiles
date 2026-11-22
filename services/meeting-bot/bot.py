@@ -39,6 +39,7 @@ CAMERA_LOCK = Path("/tmp/camera.lock")
 
 log = logging.getLogger("meetings")
 RESUMES = threading.Lock()
+NAMING: set[int] = set()
 STATE_LOCK = threading.Lock()
 TRANSCRIPTIONS = threading.Lock()
 
@@ -204,9 +205,12 @@ def start_topic(thread: str) -> None:
 
 
 def new_topic(name: str, private: bool) -> None:
+    chat = CHAT_ID if private else GROUP_ID
     if not name:
-        reply("Usage: /new <name>", chat_id=CHAT_ID if private else GROUP_ID)
+        NAMING.add(chat)
+        reply("Topic name?", chat_id=chat, reply_markup=json.dumps({"force_reply": True}))
         return
+    NAMING.discard(chat)
     thread = str(api("createForumTopic", chat_id=GROUP_ID, name=name)["message_thread_id"])
     store(thread, name=name, last_activity=time.time(), closed=False)
     if private:
@@ -298,8 +302,8 @@ def forward(msg: dict) -> None:
     if name == "/alarm":
         show_alarm()
         return
-    if name == "/new":
-        new_topic(arg, private=True)
+    if name == "/new" or CHAT_ID in NAMING and not name.startswith("/"):
+        new_topic(arg if name == "/new" else msg["text"].strip(), private=True)
         return
     if name == "/compact":
         threading.Thread(target=deliver, args=(None, "/compact", msg["message_id"])).start()
@@ -317,8 +321,8 @@ def group(msg: dict) -> None:
     if "text" not in msg:
         return
     name, arg = command(msg["text"])
-    if name == "/new":
-        new_topic(arg, private=False)
+    if name == "/new" or GROUP_ID in NAMING and not name.startswith("/"):
+        new_topic(arg if name == "/new" else msg["text"].strip(), private=False)
         return
     thread = str(msg["message_thread_id"]) if msg.get("is_topic_message") else None
     if thread not in load(TOPICS):
