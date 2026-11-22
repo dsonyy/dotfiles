@@ -19,21 +19,29 @@ from faster_whisper import WhisperModel
 
 TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = int(os.environ["TELEGRAM_CHAT_ID"])
+GROUP_ID = int(os.environ["TELEGRAM_GROUP_ID"])
 API = f"https://api.telegram.org/bot{TOKEN}"
 MAX_BYTES = 20 * 1024 * 1024
 NOTES_DIR = Path.home() / "brain/projects/meetings"
-SESSIONS = Path.home() / ".cache/telegram-sessions"
-ACTIVE = SESSIONS / "active.json"
-FILES = SESSIONS / "files"
+FILES = Path.home() / ".cache/telegram-sessions/files"
 CLAUDE_DIR = Path.home() / ".claude"
+BRAIN = Path.home() / "brain"
+STATE = Path.home() / ".local/state/meeting-bot"
+MAIN = STATE / "main.json"
+TOPICS = STATE / "topics.json"
+BOT_WINDOW = "main:=bot"
+PROMPT = "Telegram (answer there with the telegram-messaging skill): "
+COMPACT_AFTER = 55 * 60
+COMPACT_TOKENS = 50_000
+SWEEP_AFTER = 7 * 24 * 3600
 DISARMED = Path.home() / ".alarm"
 CAMERA_LOCK = Path("/tmp/camera.lock")
 
 log = logging.getLogger("meetings")
 RESUMES = threading.Lock()
-DIRS = {"Home": "~", "Brain": "~/brain", "Repos": "~/repos", "Data": "~/data"}
-awaiting_path = False
+STATE_LOCK = threading.Lock()
 TRANSCRIPTIONS = threading.Lock()
+
 
 
 # IPv6 routes to Telegram intermittently blackhole on this network and urllib waits out the whole timeout
@@ -63,7 +71,7 @@ def download(file_id: str, target: Path) -> None:
 
 def reply(text: str, markup: str | None = None, **params) -> None:
     body = f"<i>{markup or html.escape(text)}</i>"
-    log.info(f"reply sent: {api('sendMessage', chat_id=CHAT_ID, text=body, parse_mode='HTML', **params)['message_id']} {text}")
+    log.info(f"reply sent: {api('sendMessage', **{'chat_id': CHAT_ID} | params, text=body, parse_mode='HTML')['message_id']} {text}")
 
 
 def find_image(msg: dict) -> dict | None:
@@ -105,92 +113,128 @@ def live_sessions() -> dict:
     return found
 
 
-def transcript_info(path: Path) -> dict:
-    info = {"session_id": path.stem, "title": "", "permission_mode": None, "cwd": None}
-    for line in path.open():
-        if '"type":"custom-title"' in line:
-            info["custom"] = json.loads(line)["customTitle"]
-        elif '"type":"ai-title"' in line:
-            info["title"] = json.loads(line)["aiTitle"]
-        elif '"type":"last-prompt"' in line and not info["title"]:
-            info["title"] = json.loads(line).get("lastPrompt", "")
-        elif '"type":"permission-mode"' in line:
-            info["permission_mode"] = json.loads(line)["permissionMode"]
-        elif not info["cwd"] and '"cwd":"' in line:
-            info["cwd"] = json.loads(line)["cwd"]
-    info["title"] = info.pop("custom", info["title"])
-    return info
+def transcript(session_id: str) -> Path | None:
+    return next((CLAUDE_DIR / "projects").glob(f"*/{session_id}.jsonl"), None)
 
 
-def recent_sessions() -> list[dict]:
-    live = live_sessions()
-    files = sorted((CLAUDE_DIR / "projects").glob("*/*.jsonl"), key=lambda f: f.stat().st_mtime, reverse=True)
-    picked = [f for f in files if f.stem in live] + [f for f in files if f.stem not in live]
-    return [transcript_info(f) | live.get(f.stem, {}) for f in picked[:10]]
+def context_tokens(session_id: str) -> int:
+    usage = {}
+    for line in transcript(session_id).open():
+        if '"type":"assistant"' in line:
+            usage = json.loads(line)["message"].get("usage") or usage
+    return sum(usage.get(k, 0) for k in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
 
 
-def label(session: dict) -> str:
-    mark = "🟢" if "tmux_pane" in session else "⚪"
-    return f"{mark} {Path(session['cwd'] or '?').name} · {' '.join(session['title'].split())}"[:60]
+def load(path: Path) -> dict:
+    return json.loads(path.read_text()) if path.exists() else {}
 
 
-def show_sessions() -> None:
-    buttons = [[{"text": "➕ New session", "callback_data": "new"}]]
-    buttons += [[{"text": label(s), "callback_data": s["session_id"]}] for s in recent_sessions()]
-    reply("Pick a session. Plain messages go to it.", reply_markup=json.dumps({"inline_keyboard": buttons}))
+def store(thread: str | None, **fields) -> dict:
+    with STATE_LOCK:
+        if thread is None:
+            path, data = MAIN, load(MAIN) | fields
+            result = data
+        else:
+            path, data = TOPICS, load(TOPICS)
+            data[thread] = result = data.get(thread, {}) | fields
+        STATE.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=1))
+    return result
 
 
-def show_dirs() -> None:
-    buttons = [[{"text": name, "callback_data": f"new:{path}"}] for name, path in DIRS.items()]
-    buttons += [[{"text": "Specify", "callback_data": "new:?"}]]
-    reply("Where should the new session start?", reply_markup=json.dumps({"inline_keyboard": buttons}))
+def place(thread: str | None) -> dict:
+    return {"chat_id": CHAT_ID} if thread is None else {"chat_id": GROUP_ID, "message_thread_id": thread}
 
 
-def start_claude(cwd: str, args: list[str]) -> dict | None:
-    window = subprocess.run(
-        ["tmux", "new-window", "-d", "-t", "main:", "-c", cwd, "-P", "-F", "#{pane_id}"], capture_output=True, text=True
-    )
+def link(thread: str) -> str:
+    return f"https://t.me/c/{str(GROUP_ID).removeprefix('-100')}/{thread}"
+
+
+def start_claude(args: list[str], thread: str | None) -> dict | None:
+    exists = subprocess.run(["tmux", "list-panes", "-t", BOT_WINDOW], capture_output=True).returncode == 0
+    create = ["split-window", "-d", "-t", BOT_WINDOW] if exists else ["new-window", "-d", "-t", "main:", "-n", "bot"]
+    window = subprocess.run(["tmux", *create, "-c", str(BRAIN), "-P", "-F", "#{pane_id}"], capture_output=True, text=True)
     if window.returncode:
-        reply(f"Could not open a tmux window: {window.stderr.strip()}")
+        reply(f"Could not open a tmux pane: {window.stderr.strip()}", **place(thread))
         return None
+    subprocess.run(["tmux", "select-layout", "-t", BOT_WINDOW, "tiled"])
     pane = window.stdout.strip()
-    subprocess.run(["tmux", "send-keys", "-t", pane, shlex.join(["claude", *args]), "Enter"])
+    env = [] if thread is None else [f"TELEGRAM_CHAT_ID={GROUP_ID}", f"TELEGRAM_THREAD_ID={thread}"]
+    subprocess.run(["tmux", "send-keys", "-t", pane, shlex.join(["env", *env, "claude", *args]), "Enter"])
     for _ in range(30):
         time.sleep(1)
         session = next((s for s in live_sessions().values() if s["tmux_pane"] == pane), None)
         if session:
             return session
-    reply(f"Claude in tmux pane {pane} did not start.")
+    reply(f"Claude in tmux pane {pane} did not start.", **place(thread))
     return None
 
 
-def activate(session: dict) -> dict:
-    SESSIONS.mkdir(parents=True, exist_ok=True)
-    ACTIVE.write_text(json.dumps(session))
-    return session
+def live(thread: str | None) -> dict | None:
+    session = load(MAIN) if thread is None else load(TOPICS)[thread]
+    if live_pane(session):
+        return session
+    args = ["--resume", session["session_id"]] if session.get("session_id") else []
+    if args:
+        reply("Session not live, resuming it.", **place(thread))
+    started = start_claude(args, thread)
+    return started and store(thread, **started)
 
 
-def new_session(path: str) -> None:
-    cwd = Path(path).expanduser()
-    if not cwd.is_dir():
-        reply(f"No such directory: {path}. Send another path or /sessions.")
-        return
-    global awaiting_path
-    awaiting_path = False
-    session = start_claude(str(cwd), [])
+def type_into(pane: str, text: str) -> None:
+    typed = " ".join("".join(c for c in text if c.isprintable() or c.isspace()).split())
+    subprocess.run(["tmux", "send-keys", "-t", pane, "-l", typed])
+    subprocess.run(["tmux", "send-keys", "-t", pane, "Enter"])
+
+
+def deliver(thread: str | None, text: str) -> None:
+    with RESUMES:
+        session = live(thread)
+        if not session:
+            return
+        type_into(session["tmux_pane"], text)
+    reply(f"Sent to the live session in tmux pane {session['tmux_pane']}.", **place(thread))
+
+
+def start_topic(thread: str) -> None:
+    with RESUMES:
+        session = live(thread)
     if session:
-        activate(session | {"cwd": str(cwd)})
-        reply(f"New session in tmux pane {session['tmux_pane']}, in {path}. Plain messages go to it.")
+        reply(f"Session started in tmux pane {session['tmux_pane']}.", **place(thread))
 
 
-def resume(session: dict) -> dict | None:
-    live = live_sessions().get(session["session_id"])
-    if live:
-        return activate(session | live)
-    mode = ["--permission-mode", session["permission_mode"]] if session.get("permission_mode") else []
-    reply("Session not live, resuming it.")
-    started = start_claude(session["cwd"], ["--resume", session["session_id"], *mode])
-    return started and activate(session | started)
+def new_topic(name: str, private: bool) -> None:
+    if not name:
+        reply("Usage: /new <name>", chat_id=CHAT_ID if private else GROUP_ID)
+        return
+    thread = str(api("createForumTopic", chat_id=GROUP_ID, name=name)["message_thread_id"])
+    store(thread, name=name, last_activity=time.time(), closed=False)
+    if private:
+        reply(f"Topic {name}: {link(thread)}")
+    threading.Thread(target=start_topic, args=(thread,)).start()
+
+
+def maintain() -> None:
+    main = load(MAIN)
+    if main.get("last_message") and not main.get("compacted") and time.time() - main["last_message"] > COMPACT_AFTER:
+        store(None, compacted=True)
+        tokens = context_tokens(main["session_id"])
+        if live_pane(main) and tokens > COMPACT_TOKENS:
+            type_into(main["tmux_pane"], "/compact")
+            log.info(f"main session compacted at {tokens} tokens")
+    for thread, topic in load(TOPICS).items():
+        path = transcript(topic.get("session_id", ""))
+        idle = time.time() - max(topic["last_activity"], path.stat().st_mtime if path else 0)
+        if topic["closed"] or idle < SWEEP_AFTER:
+            continue
+        try:
+            api("closeForumTopic", chat_id=GROUP_ID, message_thread_id=thread)
+        except urllib.error.HTTPError:
+            log.info(f"topic {thread} was already closed")
+        if live_pane(topic):
+            subprocess.run(["tmux", "kill-pane", "-t", topic["tmux_pane"]])
+        store(thread, closed=True)
+        log.info(f"topic {thread} swept")
 
 
 def alarm_status() -> tuple[str, str]:
@@ -244,57 +288,44 @@ def answer(query: dict) -> None:
         log.info("callback query expired")
 
 
-def pick_session(query: dict) -> None:
-    global awaiting_path
-    if query["data"] == "new":
-        show_dirs()
-        return
-    if query["data"] == "new:?":
-        awaiting_path = True
-        reply("Send the directory path.")
-        return
-    if query["data"].startswith("new:"):
-        new_session(query["data"][4:])
-        return
-    session = next((s for s in recent_sessions() if s["session_id"] == query["data"]), None)
-    if not session:
-        reply("Session not found.")
-        return
-    activate(session)
-    reply(f"Active: {label(session)}")
-
-
-def deliver(session: dict, text: str) -> None:
-    with RESUMES:
-        session = session if live_pane(session) else resume(session)
-        if not session:
-            return
-        pane = session["tmux_pane"]
-        typed = " ".join("".join(c for c in text if c.isprintable() or c.isspace()).split())
-        subprocess.run(["tmux", "send-keys", "-t", pane, "-l", f"Telegram (answer there with the telegram-messaging skill): {typed}"])
-        subprocess.run(["tmux", "send-keys", "-t", pane, "Enter"])
-    reply(f"Sent to the live session in tmux pane {pane}.")
+def command(text: str) -> tuple[str, str]:
+    head, _, arg = text.partition(" ")
+    return head.partition("@")[0], arg.strip()
 
 
 def forward(msg: dict) -> None:
-    global awaiting_path
-    if msg["text"].startswith("/alarm"):
+    name, arg = command(msg["text"])
+    if name == "/alarm":
         show_alarm()
         return
-    if msg["text"].startswith("/sessions"):
-        awaiting_path = False
-        show_sessions()
+    if name == "/new":
+        new_topic(arg, private=True)
         return
-    if awaiting_path:
-        threading.Thread(target=new_session, args=(msg["text"].strip(),)).start()
+    if name == "/compact":
+        threading.Thread(target=deliver, args=(None, "/compact")).start()
         return
-    replied = SESSIONS / f"{msg.get('reply_to_message', {}).get('message_id')}.json"
-    if replied.exists():
-        threading.Thread(target=deliver, args=(json.loads(replied.read_text()), msg["text"])).start()
-    elif ACTIVE.exists():
-        threading.Thread(target=deliver, args=(json.loads(ACTIVE.read_text()), msg["text"])).start()
-    else:
-        reply("Pick a session with /sessions or reply to an agent's message.")
+    main = store(None, last_message=time.time(), compacted=False)
+    topics = load(TOPICS)
+    owner = next((t for t in topics if topics[t].get("session_id") == main.get("session_id")), None)
+    if owner:
+        reply(f"This session lives in topic {topics[owner]['name']}: {link(owner)}")
+        return
+    threading.Thread(target=deliver, args=(None, PROMPT + msg["text"])).start()
+
+
+def group(msg: dict) -> None:
+    if "text" not in msg:
+        return
+    name, arg = command(msg["text"])
+    if name == "/new":
+        new_topic(arg, private=False)
+        return
+    thread = str(msg["message_thread_id"]) if msg.get("is_topic_message") else None
+    if thread not in load(TOPICS):
+        reply("Start a topic with /new <name>.", **(place(thread) if thread else {"chat_id": GROUP_ID}))
+        return
+    store(thread, last_activity=time.time(), closed=False)
+    threading.Thread(target=deliver, args=(thread, PROMPT + msg["text"])).start()
 
 
 def handle(msg: dict) -> None:
@@ -349,9 +380,17 @@ def write_transcript(msg: dict, media: dict) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    api("setMyCommands", commands=json.dumps([{"command": "sessions", "description": "Pick an agent session"}, {"command": "alarm", "description": "Turn the camera alarm on or off"}]), scope=json.dumps({"type": "all_private_chats"}))
+    new = {"command": "new", "description": "Start a session in a new topic"}
+    compact = {"command": "compact", "description": "Compact the main session"}
+    alarm = {"command": "alarm", "description": "Turn the camera alarm on or off"}
+    api("setMyCommands", commands=json.dumps([alarm, new, compact]), scope=json.dumps({"type": "all_private_chats"}))
+    api("setMyCommands", commands=json.dumps([new]), scope=json.dumps({"type": "chat", "chat_id": GROUP_ID}))
     offset = 0
     while True:
+        try:
+            maintain()
+        except Exception:
+            log.exception("maintenance failed")
         try:
             updates = api("getUpdates", offset=offset, timeout=60)
         except Exception:
@@ -364,7 +403,7 @@ def main() -> None:
             query = update.get("callback_query")
             log.info(f"update {update['update_id']}: {sorted(msg or update)}")
             chat = (msg or (query or {}).get("message") or {}).get("chat", {}).get("id")
-            if chat != CHAT_ID:
+            if (msg or query or {}).get("from", {}).get("id") != CHAT_ID or chat not in (CHAT_ID, GROUP_ID):
                 continue
             try:
                 if query:
@@ -373,8 +412,8 @@ def main() -> None:
                         send_photo()
                     elif query["data"].startswith("alarm:"):
                         set_alarm(query)
-                    else:
-                        pick_session(query)
+                elif chat == GROUP_ID:
+                    group(msg)
                 else:
                     handle(msg)
             except Exception as e:

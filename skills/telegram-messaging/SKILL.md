@@ -9,7 +9,7 @@ python3 ~/.claude/skills/telegram-messaging/scripts/send.py <<'EOF'
 EOF
 ```
 
-Prints `sent <id>`, or the Telegram error. If the user replies to the message, the reply comes back as a new prompt in a fork of this session.
+Prints `sent <id>`, or the Telegram error. Sessions started from a Telegram topic send into that topic. The user's answer comes back as a new prompt in this session.
 
 ## Writing
 

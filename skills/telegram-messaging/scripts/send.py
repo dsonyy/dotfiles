@@ -31,6 +31,8 @@ def main() -> None:
         "parse_mode": "HTML",
         "link_preview_options": json.dumps({"is_disabled": True}),
     }
+    if os.environ.get("TELEGRAM_THREAD_ID"):
+        params["message_thread_id"] = os.environ["TELEGRAM_THREAD_ID"]
     url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage"
     try:
         with urllib.request.urlopen(url, urllib.parse.urlencode(params).encode(), timeout=30) as resp:
