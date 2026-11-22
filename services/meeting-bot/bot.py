@@ -187,13 +187,13 @@ def type_into(pane: str, text: str) -> None:
     subprocess.run(["tmux", "send-keys", "-t", pane, "Enter"])
 
 
-def deliver(thread: str | None, text: str) -> None:
+def deliver(thread: str | None, text: str, message_id: int) -> None:
     with RESUMES:
         session = live(thread)
         if not session:
             return
         type_into(session["tmux_pane"], text)
-    reply(f"Sent to the live session in tmux pane {session['tmux_pane']}.", **place(thread))
+    api("setMessageReaction", chat_id=place(thread)["chat_id"], message_id=message_id, reaction=json.dumps([{"type": "emoji", "emoji": "👀"}]))
 
 
 def start_topic(thread: str) -> None:
@@ -302,7 +302,7 @@ def forward(msg: dict) -> None:
         new_topic(arg, private=True)
         return
     if name == "/compact":
-        threading.Thread(target=deliver, args=(None, "/compact")).start()
+        threading.Thread(target=deliver, args=(None, "/compact", msg["message_id"])).start()
         return
     main = store(None, last_message=time.time(), compacted=False)
     topics = load(TOPICS)
@@ -310,7 +310,7 @@ def forward(msg: dict) -> None:
     if owner:
         reply(f"This session lives in topic {topics[owner]['name']}: {link(owner)}")
         return
-    threading.Thread(target=deliver, args=(None, PROMPT + msg["text"])).start()
+    threading.Thread(target=deliver, args=(None, PROMPT + msg["text"], msg["message_id"])).start()
 
 
 def group(msg: dict) -> None:
@@ -325,7 +325,7 @@ def group(msg: dict) -> None:
         reply("Start a topic with /new <name>.", **(place(thread) if thread else {"chat_id": GROUP_ID}))
         return
     store(thread, last_activity=time.time(), closed=False)
-    threading.Thread(target=deliver, args=(thread, PROMPT + msg["text"])).start()
+    threading.Thread(target=deliver, args=(thread, PROMPT + msg["text"], msg["message_id"])).start()
 
 
 def handle(msg: dict) -> None:
